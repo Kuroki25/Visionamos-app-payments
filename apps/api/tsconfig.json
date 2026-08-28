@@ -1,0 +1,16 @@
+{
+  "extends": "@repo/typescript-config/nest.json",
+  "compilerOptions": {
+    // TypeScript's own suggested fix (TS2593) for jest's global test
+    // functions (describe/it/expect/jest) not being auto-detected under
+    // moduleResolution "nodenext". Type-only imports (express, supertest,
+    // pg, ...) are unaffected — those resolve via normal module resolution,
+    // not this ambient-globals list.
+    "types": ["jest", "node"],
+    // ts-jest emits (in-memory) using the TS compiler API directly, so it
+    // doesn't benefit from the --noEmit CLI flag the typecheck/lint scripts
+    // pass — it still hits TS5011 without an explicit rootDir. "." (not
+    // "src") because this config's program also covers test/**.
+    "rootDir": "."
+  }
+}

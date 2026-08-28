@@ -1,0 +1,49 @@
+{
+  "name": "dashboard-web",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=24.20.0 <25"
+  },
+  "scripts": {
+    "dev": "next dev -p 3001",
+    "build": "next build",
+    "start": "next start -p 3001",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:unit": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "clean": "rimraf .next coverage playwright-report test-results"
+  },
+  "dependencies": {
+    "next": "16.3.3",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "@repo/ui": "workspace:*",
+    "@repo/contracts": "workspace:*",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@repo/eslint-config": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
+    "@repo/test-config": "workspace:*",
+    "@tailwindcss/postcss": "catalog:",
+    "@testing-library/jest-dom": "7.0.1",
+    "@testing-library/react": "16.3.3",
+    "@testing-library/user-event": "14.6.6",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "6.1.0",
+    "@vitest/coverage-v8": "4.1.11",
+    "@playwright/test": "1.62.1",
+    "eslint": "catalog:",
+    "jsdom": "30.0.1",
+    "rimraf": "6.0.1",
+    "tailwindcss": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

@@ -1,0 +1,7 @@
+@import 'tailwindcss';
+
+/* packages/ui ships raw TS/JSX source (no build step, see
+   docs/ARCHITECTURE.md "Package exports"). Tailwind's automatic content
+   detection only scans this app's own directory by default, so classes used
+   exclusively inside packages/ui would otherwise be purged. */
+@source "../../../../packages/ui/src";

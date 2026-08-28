@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // Relative path options resolve relative to the *extended* file's own
+    // directory otherwise — see apps/api/tsconfig.build.json.
+    "rootDir": "src",
+    "outDir": "dist"
+  },
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "vitest.config.ts"]
+}

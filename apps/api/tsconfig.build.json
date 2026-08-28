@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // Relative path options (outDir/rootDir) inside an *extended* config
+    // resolve relative to that base file's own directory, not this one — so
+    // @repo/typescript-config/nest.json's "./dist" would otherwise land in
+    // packages/typescript-config/dist instead of apps/api/dist. Both must be
+    // restated here explicitly.
+    "rootDir": "src",
+    "outDir": "./dist"
+  },
+  "exclude": ["node_modules", "test", "dist", "**/*spec.ts"]
+}

@@ -1,0 +1,13 @@
+{
+  "extends": "@repo/typescript-config/library.json",
+  "compilerOptions": {
+    // See apps/api/tsconfig.json for why nodenext (not the deprecated
+    // node10) is what makes this compile as CommonJS — required so
+    // apps/api (CJS) can require() this package without a dual-package
+    // hazard (docs/adr/004-api-contract-strategy.md).
+    "module": "nodenext",
+    "moduleResolution": "nodenext"
+  },
+  "include": ["src", "vitest.config.ts"],
+  "exclude": ["node_modules", "dist"]
+}

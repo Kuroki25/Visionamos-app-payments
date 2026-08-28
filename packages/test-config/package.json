@@ -1,0 +1,17 @@
+{
+  "name": "@repo/test-config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "UNLICENSED",
+  "exports": {
+    "./vitest-setup": "./vitest.setup.ts",
+    "./vitest-base": "./vitest.base.ts"
+  },
+  "dependencies": {
+    "@testing-library/jest-dom": "7.0.1"
+  },
+  "peerDependencies": {
+    "vitest": "4.1.11"
+  }
+}

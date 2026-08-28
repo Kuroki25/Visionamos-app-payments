@@ -1,0 +1,54 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+
+# Centralized dependency versions consumed via the "catalog:" protocol.
+# One entry here == one version across the whole workspace. See
+# docs/DEPENDENCY_POLICY.md for the rule this enforces and why.
+catalog:
+  react: 19.2.8
+  react-dom: 19.2.8
+  '@types/react': 19.2.18
+  '@types/react-dom': 19.2.5
+  typescript: 6.0.3
+  zod: 4.4.3
+  eslint: 9.39.5
+  '@types/node': 24.13.3
+  prettier: 3.6.2
+  tailwindcss: 4.3.3
+  '@tailwindcss/postcss': 4.3.3
+  vitest: 4.1.11
+
+# --- Supply-chain / install safety (docs/DEPENDENCY_POLICY.md) ---
+
+# Fail install rather than silently resolve an incompatible peerDependency
+# (e.g. would have caught NestJS 12 + @nestjs/throttler 6.x on its own).
+strictPeerDependencies: true
+
+# Reject a workspace:* dependency cycle between internal packages
+# (e.g. packages/ui depending on an app, or contracts depending on api).
+disallowWorkspaceCycles: true
+
+# Block postinstall/preinstall/install scripts from dependencies by default;
+# each one that legitimately needs to run a native build step is explicitly
+# allow-listed below after review (docs/DEPENDENCY_POLICY.md).
+allowBuilds:
+  # Test-only native SQLite bindings (apps/api uses this in NODE_ENV=test
+  # instead of Postgres — docs/adr/010-persistence.md). Needs its build step
+  # to compile/download the native addon; without it the test suite can't run.
+  better-sqlite3: true
+  # Telemetry/analytics install-script (no functional purpose for this repo).
+  '@scarf/scarf': false
+  # Native resolver used transitively by tooling; has a pure-JS fallback path
+  # when its build is skipped (same default Next.js itself ships in a fresh
+  # create-next-app monorepo scaffold).
+  unrs-resolver: false
+
+# pnpm 11 auto-populated this the first time `pnpm install` ran, to gate
+# adoption of very-recently-published package versions by default (a
+# supply-chain safeguard against a maintainer account being compromised and
+# publishing a malicious version minutes ago). Both exclusions below are
+# versions this project already vetted deliberately in
+# docs/COMPATIBILITY_MATRIX.md, not blind trust of "whatever is newest".
+minimumReleaseAgeExclude:
+  - '@testing-library/react@16.3.3'
