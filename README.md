@@ -48,59 +48,7 @@ cd Visionamos-app-payments
 pnpm install
 ```
 
-## 4. Variables de entorno
-
-Cada app tiene su propio `.env.example` — copialo a `.env` en la misma
-carpeta y ajustá lo que necesites. **Nunca se commitean los `.env` reales**
-(están en `.gitignore`); solo los `.env.example` viven en el repo.
-
-### 4.1 `apps/api/.env`
-
-```bash
-cp apps/api/.env.example apps/api/.env
-```
-
-| Variable | Para qué sirve | Desarrollo local | Producción |
-|---|---|---|---|
-| `NODE_ENV` | Selecciona el modo de la app | `development` | `production` |
-| `PORT` | Puerto HTTP del backend | `4100` | el que asigne tu hosting |
-| `CORS_ALLOWED_ORIGINS` | Orígenes permitidos (coma-separado) | `http://localhost:3100,http://localhost:3101` | las URLs reales de tus frontends desplegados |
-| `SWAGGER_ENABLED` | Expone `/api/v1/docs` | `true` | `false` (no exponer el explorador de API en producción) |
-| `THROTTLE_TTL_MS` / `THROTTLE_LIMIT` | Rate limiting global | `60000` / `100` | ajustar según tráfico esperado |
-| `LOG_LEVEL` | Verbosidad de logs (pino) | `info` o `debug` | `info` o `warn` |
-| `DB_HOST` / `DB_PORT` / `DB_USERNAME` / `DB_PASSWORD` / `DB_NAME` | Conexión a PostgreSQL | `localhost` / `5442` / `visionamos` / `visionamos` / `visionamos` | las de tu Postgres administrado |
-| `DB_SSL` | TLS contra Postgres | `false` | `true` (casi todo hosting administrado lo exige) |
-| `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` | Firman los tokens de sesión — **deben ser distintos entre sí** | generar uno de prueba (ver abajo) | generar uno real por variable, **nunca reutilizar el de otro entorno** |
-| `JWT_ACCESS_TTL` | Vigencia del access token | `15m` | `15m` (no alargar sin razón) |
-| `JWT_REFRESH_TTL_DAYS` | Vigencia del refresh token | `7` | según tu política de sesión |
-| `COOKIE_SECURE` | Cookies solo por HTTPS | `false` (estás en `http://localhost`) | `true` (**obligatorio** — nunca `false` en producción) |
-| `SUPERADMIN_EMAIL` / `SUPERADMIN_PASSWORD` / `SUPERADMIN_FULL_NAME` | Solo los lee `pnpm seed:superadmin`, nunca la app en caliente | los que quieras para tu ambiente local | credenciales reales, usadas una sola vez y luego se pueden borrar del `.env` |
-
-Generar un secreto real:
-
-```bash
-node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
-```
-
-**Para correr los tests (`pnpm test`, `pnpm test:integration`) no hace falta
-crear `.env` ni Postgres real** — usan una base SQLite en memoria y secretos
-de prueba que se autocompletan (`apps/api/test/setup-env.ts`). `NODE_ENV=test`
-lo pone Jest automáticamente.
-
-### 4.2 `apps/portal-web/.env` y `apps/dashboard-web/.env`
-
-Mismo contenido en ambos:
-
-```bash
-cp apps/portal-web/.env.example apps/portal-web/.env
-cp apps/dashboard-web/.env.example apps/dashboard-web/.env
-```
-
-| Variable | Para qué sirve | Desarrollo local | Producción |
-|---|---|---|---|
-| `NEXT_PUBLIC_API_URL` | URL base del backend (va al bundle del navegador, por eso el prefijo `NEXT_PUBLIC_`) | `http://localhost:4100/api/v1` | la URL pública real del backend, con `https://` |
-
-## 5. Base de datos
+## 4. Base de datos
 
 ```bash
 docker compose up -d postgres        # levanta Postgres en el puerto 5442
@@ -113,7 +61,7 @@ pnpm --filter api seed:demo          # opcional: datos de ejemplo (portales, com
 - `seed:superadmin` y `seed:demo` también son idempotentes: si ya corriste, avisan y no hacen nada.
 - No hay autoregistro público — la única forma de tener el primer usuario es `seed:superadmin`. De ahí en adelante, `POST /users` (autenticado) crea el resto.
 
-## 6. Levantar todo en desarrollo
+## 5. Levantar todo en desarrollo
 
 ```bash
 pnpm dev
@@ -130,7 +78,7 @@ pnpm --filter dashboard-web dev        # backoffice
 Con la API arriba, el explorador interactivo de la API está en
 `http://localhost:4100/api/v1/docs` (Swagger, solo si `SWAGGER_ENABLED=true`).
 
-## 7. Tests
+## 6. Tests
 
 ```bash
 pnpm test              # unit tests de todas las apps
@@ -147,25 +95,7 @@ pnpm --filter api test:integration  # e2e (jest + supertest, sqlite en memoria)
 pnpm --filter portal-web test:e2e   # Playwright
 ```
 
-## 8. Producción
-
-```bash
-pnpm build                       # compila las 3 apps
-pnpm --filter api migration:run  # aplica migraciones pendientes contra la BD real, ANTES de arrancar
-pnpm --filter api start:prod     # corre el backend compilado (dist/main.js)
-pnpm --filter portal-web start   # corre el frontend compilado
-pnpm --filter dashboard-web start
-```
-
-Checklist mínimo antes de desplegar:
-
-- [ ] `.env` de `apps/api` con `NODE_ENV=production`, `COOKIE_SECURE=true`, `DB_SSL=true`, `SWAGGER_ENABLED=false`, y `JWT_ACCESS_SECRET`/`JWT_REFRESH_SECRET` generados de nuevo (no los de desarrollo).
-- [ ] `CORS_ALLOWED_ORIGINS` apuntando exactamente a los dominios reales de `portal-web`/`dashboard-web` (nunca `*`).
-- [ ] `NEXT_PUBLIC_API_URL` de ambos frontends apuntando al dominio real del backend, con `https://`.
-- [ ] Migraciones aplicadas (`migration:run`) contra la base real antes de recibir tráfico.
-- [ ] Un solo `SUPERADMIN` inicial sembrado (`seed:superadmin`), credenciales rotadas después del primer login.
-
-## 9. Estructura del proyecto
+## 7. Estructura del proyecto
 
 ```text
 apps/
@@ -183,10 +113,3 @@ docs/
   SECURITY-CONTROLS.md Cada control de seguridad mapeado a su test
 docker-compose.yml     Postgres para desarrollo local
 ```
-
-## 10. Si vas a tocar la app
-
-- Antes de cambiar autenticación/autorización, leé `docs/adr/006` y `docs/adr/011`.
-- Antes de tocar el modelo de datos, leé `docs/adr/010` (persistencia/migraciones) y `docs/adr/012` (por qué Transacciones es de solo lectura por ahora).
-- Las migraciones se generan con `pnpm --filter api migration:generate src/migrations/NombreDescriptivo` contra un Postgres real — **revisá siempre el archivo generado a mano** antes de commitear (TypeORM no deduplica `CREATE TYPE` cuando un enum se comparte entre tablas; ver los comentarios en las migraciones ya existentes).
-- No hay `DELETE` para Portal/Categoría/Comercio/Servicio/Transacción — es una regla de negocio confirmada (`docs/business/ROLE_PERMISSION_MATRIX.md`), no un endpoint faltante.
