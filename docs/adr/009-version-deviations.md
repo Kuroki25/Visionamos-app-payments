@@ -79,6 +79,13 @@ vez de forzar a Jest a transformar un paquete de `node_modules` (lo que además
 seguiría rompiendo cualquier consumidor CJS del árbol de dependencias de ese
 paquete).
 
+### `@nestjs/jwt`: 11.0.2 en vez de 12.0.1
+
+Mismo patrón exacto que `@nestjs/config` arriba: `@nestjs/jwt@12.0.1` es
+ESM-only (`"type": "module"`, sin condición `require`), rompe Jest/ts-jest en
+modo CJS. `@nestjs/jwt@11.0.2` es CJS y su peer (`@nestjs/common: ^8.0.0 ||
+... || ^11.0.0`) sigue siendo compatible con nuestra rama 11.
+
 ## Consequences
 
 - Cuando `@nestjs/throttler`, `@nestjs/terminus` y `nestjs-zod` publiquen soporte

@@ -3,12 +3,11 @@ import 'reflect-metadata';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import helmet from 'helmet';
 import { cleanupOpenApiDoc } from 'nestjs-zod';
 import { Logger } from 'nestjs-pino';
 
 import { AppModule } from './app.module';
-import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import { configureApp } from './config/configure-app';
 import type { Env } from './config/env.schema';
 
 async function bootstrap(): Promise<void> {
@@ -17,23 +16,7 @@ async function bootstrap(): Promise<void> {
 
   const config = app.get(ConfigService<Env, true>);
 
-  // Security headers (section 27/28 baseline: CSP, HSTS, X-Content-Type-Options, ...).
-  app.use(helmet());
-
-  // Explicit origin allowlist — never "*" together with credentials (section 23).
-  const allowedOrigins = config
-    .get('CORS_ALLOWED_ORIGINS', { infer: true })
-    .split(',')
-    .map((origin) => origin.trim())
-    .filter(Boolean);
-  app.enableCors({
-    origin: allowedOrigins,
-    credentials: true,
-  });
-
-  app.setGlobalPrefix('api/v1');
-
-  app.useGlobalFilters(new AllExceptionsFilter());
+  configureApp(app, config);
 
   if (config.get('SWAGGER_ENABLED', { infer: true })) {
     const document = SwaggerModule.createDocument(

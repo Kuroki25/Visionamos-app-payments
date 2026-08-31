@@ -46,6 +46,54 @@ la combinación más estándar y mejor soportada por el ecosistema NestJS.
   requiere configurar `typeorm migration:generate`/`migration:run` antes de un
   despliegue real — ver `docs/DEPENDENCY_POLICY.md` (pendiente).
 
+## Actualización 2026-08-30: migraciones reales en Postgres
+
+El schema inicial (`users`, `refresh_tokens`) se generó siempre por
+`synchronize` — incluido, por error, en `NODE_ENV=development` además de
+`test`. Al introducir el subdominio de Red Coopagos (`role_assignments`,
+`audit_events`, `portals`, `categories`, `commerces`, `services`, las cuatro
+tablas de formularios) con constraints reales (`CHECK` multi-columna,
+`UNIQUE` compuestos, un índice único parcial para "una sola `FormVersion`
+publicada por definición"), depender de `synchronize` deja de ser aceptable
+para un dominio de pagos: no hay historial versionado del schema, no hay
+forma de revisar un cambio de estructura en code review antes de aplicarlo, y
+`synchronize` puede alterar una tabla con datos reales sin la deliberación de
+una migración explícita.
+
+**Decisión:** `synchronize` pasa a `false` en todo entorno que no sea
+`NODE_ENV=test` — `development` y `production` requieren
+`pnpm --filter api migration:run` contra un Postgres real. El `DataSource`
+del CLI vive en `apps/api/src/config/data-source.ts` (mismas entidades que
+`database.module.ts`, importadas desde `apps/api/src/config/entities.ts` para
+no duplicar la lista). Las migraciones se generan agrupadas por concepto
+(`AlterUsersDropRoleAddStatus`, `CreateRoleAssignments`,
+`CreateAuditEvents`, `CreatePortalsCategoriesCommercesServices`,
+`CreateForms`), no como un único archivo — permite revisar y revertir cada
+pieza de forma independiente.
+
+**El branch de test (`better-sqlite3` en memoria) no cambia** — sigue usando
+`synchronize: true`. Verificado directamente contra el driver instalado
+(`node_modules/typeorm/driver/sqlite-abstract/AbstractSqliteDriver.js`) que
+`better-sqlite3` soporta nativamente `type: 'jsonb'` y emula `enum` vía
+`CHECK IN (...)`, y que `@Check()`/`@Index({ where })` (índice único parcial)
+son decoradores reales de TypeORM 1.1.0 — las mismas clases de entidad
+generan un schema estructuralmente equivalente en ambos motores sin
+ramificación por dialecto, así que no hay necesidad real de mantener
+migraciones separadas "para SQLite". Ningún test de integración necesita
+afirmar comportamiento físico específico de Postgres (nombre exacto de un
+tipo `enum`, plan de un índice parcial) — solo el comportamiendo observable
+por HTTP (200/403/409), idéntico en ambos motores porque la fuente de verdad
+(los decoradores de entidad) es una sola.
+
+Una consecuencia práctica de `synchronize: false` fuera de test: ya no existe
+forma de crear el primer `AppUser` vía `POST /auth/register` (eliminado, ver
+ADR 006/011) — el primer `SUPERADMIN` se crea con un script idempotente
+(`apps/api/src/scripts/seed-superadmin.ts`, `pnpm --filter api
+seed:superadmin`), deliberadamente **no** una migración de datos (credenciales
+hasheadas no deben vivir para siempre en el historial de migraciones) ni
+auto-creación en cada arranque de `main.ts` (podría recrear un SUPERADMIN que
+alguien desactivó a propósito).
+
 ## Consequences
 
 - El dominio (`UsersService`) depende de un `Repository<UserEntity>` inyectado

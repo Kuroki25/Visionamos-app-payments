@@ -1,3 +1,4 @@
+import type { MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD, APP_PIPE } from '@nestjs/core';
@@ -8,7 +9,20 @@ import { LoggerModule } from 'nestjs-pino';
 import { DatabaseModule } from './config/database.module';
 import type { Env } from './config/env.schema';
 import { validateEnv } from './config/env.schema';
+import { AuditModule } from './modules/audit/audit.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { CsrfGuard } from './modules/auth/guards/csrf.guard';
+import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
+import { RolesGuard } from './modules/auth/guards/roles.guard';
+import { CsrfCookieMiddleware } from './modules/auth/middleware/csrf-cookie.middleware';
+import { CategoriesModule } from './modules/categories/categories.module';
+import { CommercesModule } from './modules/commerces/commerces.module';
+import { FormsModule } from './modules/forms/forms.module';
 import { HealthModule } from './modules/health/health.module';
+import { PortalsModule } from './modules/portals/portals.module';
+import { RoleAssignmentsModule } from './modules/role-assignments/role-assignments.module';
+import { ServicesModule } from './modules/services/services.module';
+import { TransactionsModule } from './modules/transactions/transactions.module';
 import { UsersModule } from './modules/users/users.module';
 
 @Module({
@@ -34,15 +48,15 @@ import { UsersModule } from './modules/users/users.module';
               'req.headers.authorization',
               'req.headers.cookie',
               'res.headers["set-cookie"]',
+              'req.headers["x-csrf-token"]',
             ],
           },
         };
       },
     }),
 
-    // Default rate limit for the whole API (section 24). Endpoints with a
-    // stricter need (login, password reset, OTP) override it with their own
-    // @Throttle(...) decorator once they exist — see docs/API_GUIDELINES.md.
+    // Default rate limit for the whole API (section 24). Auth endpoints
+    // override this with a stricter @Throttle(...) (see AuthController).
     ThrottlerModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService<Env, true>) => [
@@ -54,12 +68,31 @@ import { UsersModule } from './modules/users/users.module';
     }),
 
     DatabaseModule,
+    AuthModule,
     HealthModule,
     UsersModule,
+    AuditModule,
+    RoleAssignmentsModule,
+    PortalsModule,
+    CategoriesModule,
+    CommercesModule,
+    ServicesModule,
+    FormsModule,
+    TransactionsModule,
   ],
   providers: [
     { provide: APP_PIPE, useClass: ZodValidationPipe },
+    // Order matters: rate-limit first (cheapest check), then authenticate,
+    // then authorize by role, then CSRF (only relevant once we know the
+    // request is a same-origin, cookie-carrying mutation).
     { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: RolesGuard },
+    { provide: APP_GUARD, useClass: CsrfGuard },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(CsrfCookieMiddleware).forRoutes('*');
+  }
+}

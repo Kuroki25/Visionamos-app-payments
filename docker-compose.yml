@@ -6,10 +6,22 @@ services:
       POSTGRES_USER: visionamos
       POSTGRES_PASSWORD: visionamos
       POSTGRES_DB: visionamos
+    # Host-side port only — 5442, not the 5432 default, so this project's
+    # Postgres doesn't collide with other projects' databases (or a native
+    # Postgres install) using the conventional port on the same machine.
+    # The container's own internal port stays 5432 (only the host mapping
+    # needs to change).
     ports:
-      - '5432:5432'
+      - '5442:5432'
+    # Postgres 18's official image changed its data-directory convention to
+    # major-version-specific subdirectories under a single mount point
+    # (docker-library/postgres#1259) — mounting at the old .../data path (as
+    # every earlier Postgres major version expected) makes the 18 image
+    # refuse to start ("Restarting" crash loop) the moment the volume has
+    # ever held data at that path. Mount at /var/lib/postgresql (no /data
+    # suffix), matching the image's own suggested fix.
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U visionamos']
       interval: 5s

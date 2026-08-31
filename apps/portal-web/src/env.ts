@@ -4,7 +4,7 @@ import { z } from 'zod';
 // (section 9) — this file is the single place that reads process.env in this
 // app, so nothing un-prefixed can leak in by accident.
 const EnvSchema = z.object({
-  NEXT_PUBLIC_API_URL: z.url().default('http://localhost:4000/api/v1'),
+  NEXT_PUBLIC_API_URL: z.url().default('http://localhost:4100/api/v1'),
 });
 
 export const env = EnvSchema.parse({

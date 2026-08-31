@@ -2,19 +2,24 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule, type TypeOrmModuleOptions } from '@nestjs/typeorm';
 
-import { UserEntity } from '../modules/users/entities/user.entity';
+import { ENTITIES } from './entities';
 import type { Env } from './env.schema';
-
-const ENTITIES = [UserEntity];
+import { SnakeCaseNamingStrategy } from './snake-case-naming.strategy';
 
 /**
  * Persistence wiring (docs/adr/010-persistence.md). Production/development
  * use PostgreSQL; NODE_ENV=test swaps in an in-memory SQLite database so the
  * integration test suite (test/app.e2e-spec.ts) can boot the real AppModule
  * without a live Postgres instance — a deliberate, documented trade-off, not
- * a hidden shortcut. `synchronize` is only ever on outside production;
- * production schema changes must go through TypeORM migrations (not yet set
- * up — tracked as a pending item in docs/DEPENDENCY_POLICY.md).
+ * a hidden shortcut.
+ *
+ * `synchronize` is true ONLY in `test` — it used to also be true in
+ * `development` (docs/adr/010, "Actualización 2026-08-30"), which stopped
+ * being acceptable once the schema grew real constraints (CHECK, partial
+ * unique indexes) that deserve to be reviewed as an explicit migration, not
+ * silently auto-generated. `development`/`production` require
+ * `pnpm --filter api migration:run` against a real Postgres — see
+ * data-source.ts.
  */
 @Module({
   imports: [
@@ -31,6 +36,7 @@ const ENTITIES = [UserEntity];
             dropSchema: true,
             synchronize: true,
             entities: ENTITIES,
+            namingStrategy: new SnakeCaseNamingStrategy(),
           };
         }
 
@@ -42,8 +48,9 @@ const ENTITIES = [UserEntity];
           password: config.get('DB_PASSWORD', { infer: true }),
           database: config.get('DB_NAME', { infer: true }),
           ssl: config.get('DB_SSL', { infer: true }),
-          synchronize: nodeEnv === 'development',
+          synchronize: false,
           entities: ENTITIES,
+          namingStrategy: new SnakeCaseNamingStrategy(),
         };
       },
     }),

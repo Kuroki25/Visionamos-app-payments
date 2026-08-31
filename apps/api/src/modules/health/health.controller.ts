@@ -7,6 +7,8 @@ import {
   TypeOrmHealthIndicator,
 } from '@nestjs/terminus';
 
+import { Public } from '../auth/decorators/public.decorator';
+
 // Public health probe (no auth, no business data) — safe to expose to a load
 // balancer/orchestrator.
 @ApiTags('health')
@@ -18,6 +20,7 @@ export class HealthController {
     private readonly db: TypeOrmHealthIndicator,
   ) {}
 
+  @Public()
   @Get()
   @HealthCheck()
   @ApiOperation({ summary: 'Liveness/readiness probe' })

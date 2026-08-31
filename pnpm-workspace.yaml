@@ -37,6 +37,8 @@ allowBuilds:
   # instead of Postgres — docs/adr/010-persistence.md). Needs its build step
   # to compile/download the native addon; without it the test suite can't run.
   better-sqlite3: true
+  # Native Argon2id bindings used for password hashing (docs/adr/006).
+  argon2: true
   # Telemetry/analytics install-script (no functional purpose for this repo).
   '@scarf/scarf': false
   # Native resolver used transitively by tooling; has a pure-JS fallback path
