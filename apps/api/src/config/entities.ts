@@ -1,4 +1,3 @@
-import { RefreshTokenEntity } from '../modules/auth/entities/refresh-token.entity';
 import { AuditEventEntity } from '../modules/audit/entities/audit-event.entity';
 import { CategoryEntity } from '../modules/categories/entities/category.entity';
 import { CommerceEntity } from '../modules/commerces/entities/commerce.entity';
@@ -15,13 +14,15 @@ import { UserEntity } from '../modules/users/entities/user.entity';
 
 /**
  * Single source of truth for the entity list — shared by database.module.ts
- * (Nest bootstrap: both the Postgres branch and the SQLite test branch) and
- * data-source.ts (the migration CLI's standalone DataSource), so the schema
- * TypeORM sees in each of the three places can never drift (docs/adr/010).
+ * (Nest bootstrap) and data-source.ts (the migration CLI's standalone
+ * DataSource), so the schema TypeORM sees in both places can never drift
+ * (docs/adr/010). No `RefreshTokenEntity` since the Better Auth cutover
+ * (docs/adr/013) — `refresh_tokens` (the table) is dropped by the
+ * `AlterUsersForBetterAuthCutover` migration; Better Auth's own `session`
+ * table replaces what it did.
  */
 export const ENTITIES = [
   UserEntity,
-  RefreshTokenEntity,
   RoleAssignmentEntity,
   AuditEventEntity,
   PortalEntity,

@@ -4,12 +4,12 @@ import type { Request } from 'express';
 
 import type { AuthenticatedRequestUser } from '../types/authenticated-request-user.type';
 
-/** Reads the principal JwtAuthGuard attached to the request. */
+/** Reads the principal BetterAuthSessionGuard attached to the request. */
 export const CurrentUser = createParamDecorator(
   (_data: unknown, ctx: ExecutionContext): AuthenticatedRequestUser => {
     const request = ctx.switchToHttp().getRequest<Request & { user?: AuthenticatedRequestUser }>();
     if (!request.user) {
-      throw new Error('CurrentUser used on a route without JwtAuthGuard.');
+      throw new Error('CurrentUser used on a route without BetterAuthSessionGuard.');
     }
     return request.user;
   },

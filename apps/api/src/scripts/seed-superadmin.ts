@@ -1,7 +1,9 @@
 import 'reflect-metadata';
 import * as argon2 from 'argon2';
+import { randomUUID } from 'node:crypto';
 
 import { AppDataSource } from '../config/data-source';
+import { createBetterAuthIdentity } from '../infra/better-auth/create-better-auth-identity';
 import { AuditEventEntity } from '../modules/audit/entities/audit-event.entity';
 import { RoleAssignmentEntity } from '../modules/role-assignments/entities/role-assignment.entity';
 import { UserEntity } from '../modules/users/entities/user.entity';
@@ -39,13 +41,16 @@ async function main(): Promise<void> {
     }
 
     const passwordHash = await argon2.hash(password);
+    const userId = randomUUID(); // Better Auth's `user` row must exist before `users.id` can reference it (FK).
 
     await AppDataSource.transaction(async (manager) => {
       const userRepository = manager.getRepository(UserEntity);
       const assignmentRepository = manager.getRepository(RoleAssignmentEntity);
       const auditRepository = manager.getRepository(AuditEventEntity);
 
-      const user = await userRepository.save(userRepository.create({ email, fullName, passwordHash, status: 'ACTIVE' }));
+      await createBetterAuthIdentity(manager, { userId, email, fullName, passwordHash });
+
+      const user = await userRepository.save(userRepository.create({ id: userId, email, fullName, status: 'ACTIVE' }));
 
       await assignmentRepository.save(
         assignmentRepository.create({

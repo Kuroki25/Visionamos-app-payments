@@ -1,5 +1,5 @@
 import { EntityStatusSchema } from '@repo/contracts';
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, Unique, UpdateDateColumn } from 'typeorm';
+import { Column, CreateDateColumn, Entity, PrimaryColumn, Unique, UpdateDateColumn } from 'typeorm';
 import type { z } from 'zod';
 
 type EntityStatus = z.infer<typeof EntityStatusSchema>;
@@ -13,11 +13,20 @@ type EntityStatus = z.infer<typeof EntityStatusSchema>;
  * lives in RoleAssignmentEntity instead (docs/adr/011) — a user has at most
  * one active role+scope assignment, modeled as its own row rather than a
  * column here, so authorization data isn't mixed with identity data.
+ *
+ * Since the Better Auth cutover (docs/adr/013-better-auth-migration.md),
+ * this is a *profile* table, not an identity table: `id` is no longer
+ * self-generated (`@PrimaryColumn`, not `@PrimaryGeneratedColumn`) — every
+ * caller must pass the same `id` as the matching Better Auth `user` row
+ * (`FOREIGN KEY (id) REFERENCES "user"(id)`, migration
+ * `AlterUsersForBetterAuthCutover`), created first in the same transaction
+ * via `createBetterAuthIdentity`. `password_hash` is gone — Better Auth
+ * owns the credential now (`account.password`).
  */
 @Entity({ name: 'users' })
 @Unique(['email'])
 export class UserEntity {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryColumn({ type: 'uuid' })
   id!: string;
 
   @Column({ type: 'varchar', length: 320 })
@@ -25,12 +34,6 @@ export class UserEntity {
 
   @Column({ type: 'varchar', length: 200 })
   fullName!: string;
-
-  // select: false — never returned by a plain find()/findOneBy(); a query
-  // must explicitly opt in (see AuthService.validateCredentials), so a
-  // developer can't accidentally serialize the hash into an API response.
-  @Column({ type: 'varchar', length: 255, select: false })
-  passwordHash!: string;
 
   @Column({ type: 'simple-enum', enum: EntityStatusSchema.options, enumName: 'entity_status', default: 'ACTIVE' })
   status!: EntityStatus;

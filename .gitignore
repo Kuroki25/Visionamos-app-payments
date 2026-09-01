@@ -41,3 +41,6 @@ Thumbs.db
 
 # Misc
 .eslintcache
+
+# Local database backups (pg_dump) — real dev data, never committed.
+.backups/

@@ -9,7 +9,7 @@ import type { AuthenticatedRequestUser } from '../types/authenticated-request-us
 
 /**
  * Function-level authorization (API5 — Broken Function Level Authorization).
- * Runs after JwtAuthGuard, so `req.user` is already populated. A route with
+ * Runs after BetterAuthSessionGuard, so `req.user` is already populated. A route with
  * no @Roles(...) is allowed for any authenticated principal. This only
  * checks the four fixed roles — organizational scope (does this
  * ADMIN_PORTAL own *this* portal) is a separate, per-resource check via

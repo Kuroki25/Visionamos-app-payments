@@ -18,7 +18,7 @@ describe('catalog (integration)', () => {
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({ imports: [AppModule] }).compile();
-    app = moduleFixture.createNestApplication();
+    app = moduleFixture.createNestApplication({ bodyParser: false });
     configureApp(app, app.get(ConfigService<Env, true>));
     await app.init();
 
@@ -174,6 +174,68 @@ describe('catalog (integration)', () => {
     it('the same name twice within the same commerce returns 409', async () => {
       const res = await superadmin.post(`/api/v1/commerces/${commerceId}/services`).send({ name: 'Matrícula' });
       expect(res.status).toBe(409);
+    });
+  });
+
+  /**
+   * Regression for GAP-01 (docs/auth-migration/02-business-access-model.md):
+   * CategoriesService used to call assertScope with a portalId only, and
+   * assertScope's COMMERCE branch requires a matching commerceId to ever
+   * pass — so an ADMIN_COMMERCE always got 403 reading categories, even for
+   * their own portal, contradicting the 👁 read access documented in
+   * docs/business/ROLE_PERMISSION_MATRIX.md §5.3.
+   */
+  describe('Category — commerce-scoped read (GAP-01 regression)', () => {
+    let adminCommerce: TestSession;
+    let otherPortalId: string;
+    let otherCategoryId: string;
+
+    beforeAll(async () => {
+      const email = `admin-commerce-cat-${Date.now()}@example.com`;
+      const password = 'a-strong-password-123';
+      const createRes = await superadmin.post('/api/v1/users').send({
+        email,
+        password,
+        fullName: 'Admin Commerce Cat',
+        role: 'ADMIN_COMMERCE',
+        scopeCommerceId: commerceId,
+      });
+      expect(createRes.status).toBe(201);
+
+      adminCommerce = await TestSession.create(app.getHttpServer());
+      const loginRes = await adminCommerce.login(email, password);
+      expect(loginRes.status).toBe(200);
+
+      const otherPortal = await superadmin.post('/api/v1/portals').send({ name: `Portal Ajeno Cat ${Date.now()}` });
+      otherPortalId = otherPortal.body.id;
+      const otherCategory = await superadmin
+        .post(`/api/v1/portals/${otherPortalId}/categories`)
+        .send({ name: `Categoría ajena ${Date.now()}` });
+      otherCategoryId = otherCategory.body.id;
+    });
+
+    it('ADMIN_COMMERCE can list categories of the portal their own commerce belongs to', async () => {
+      const res = await adminCommerce.get(`/api/v1/portals/${portalId}/categories`);
+      expect(res.status).toBe(200);
+      const categories = res.body as { id: string }[];
+      expect(Array.isArray(categories)).toBe(true);
+      expect(categories.some((c) => c.id === categoryId)).toBe(true);
+    });
+
+    it('ADMIN_COMMERCE can view a category of their own portal by id', async () => {
+      const res = await adminCommerce.get(`/api/v1/categories/${categoryId}`);
+      expect(res.status).toBe(200);
+      expect(res.body.id).toBe(categoryId);
+    });
+
+    it('ADMIN_COMMERCE cannot list categories of a different portal (cross-portal BOLA)', async () => {
+      const res = await adminCommerce.get(`/api/v1/portals/${otherPortalId}/categories`);
+      expect(res.status).toBe(403);
+    });
+
+    it('ADMIN_COMMERCE cannot view a category belonging to a different portal (cross-portal BOLA)', async () => {
+      const res = await adminCommerce.get(`/api/v1/categories/${otherCategoryId}`);
+      expect(res.status).toBe(403);
     });
   });
 });

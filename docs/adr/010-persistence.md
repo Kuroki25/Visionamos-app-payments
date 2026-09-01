@@ -94,6 +94,45 @@ hasheadas no deben vivir para siempre en el historial de migraciones) ni
 auto-creación en cada arranque de `main.ts` (podría recrear un SUPERADMIN que
 alguien desactivó a propósito).
 
+## Actualización 2026-09-01: se retira SQLite, todo entorno usa Postgres real
+
+Esta ADR ya anticipaba esto ("Alternatives considered": *"Testear siempre
+contra Postgres real... debería adoptarse cuando el equipo tenga un
+pipeline de CI con Docker disponible"*; "Trade-offs": *"Si [las entidades
+dejan de ser simples], migrar los tests de integración a un Postgres real
+debe priorizarse"*). El disparador real fue
+`docs/adr/013-better-auth-migration.md` (Fase 10): las tablas propias de
+Better Auth (`user`/`session`/`account`/`verification`) no son entidades
+TypeORM — nunca existieron en el SQLite en memoria, y
+`BetterAuthSessionGuard` necesita que existan para funcionar en absoluto.
+Mantener dos motores ya no era sostenible.
+
+**Decisión:** se elimina por completo el branch `better-sqlite3` de
+`database.module.ts` — **todo** `NODE_ENV` (`development`, `test`,
+`production`) se conecta a PostgreSQL real. La dependencia `better-sqlite3`
+se desinstaló (`pnpm remove better-sqlite3 --filter api`), junto con su
+entrada en `pnpm-workspace.yaml` `allowBuilds` y los códigos de error
+`SQLITE_CONSTRAINT_*` en `all-exceptions.filter.ts` (ya no alcanzables).
+
+`test:integration` (`apps/api/test/*.e2e-spec.ts`) ahora apunta a una base
+de datos **dedicada**, `visionamos_test` — nunca la base de desarrollo real
+(`visionamos`), para no arriesgar los datos reales del usuario. La crea,
+migra (TypeORM + Better Auth) y limpia
+`apps/api/test/global-setup-postgres.ts` (`globalSetup` de Jest, corre una
+vez antes de toda la suite) — ver ese archivo y
+`docs/auth-migration/09-real-postgres-test-suite.md` para el detalle
+completo. `synchronize`/`dropSchema` quedan en `false` también para test:
+ya no hay un "modo rápido" que autogenere el schema — los tests corren
+contra el mismo camino de migraciones reales que development/production,
+lo cual además es más fiel a producción que el `synchronize:true` anterior.
+
+**Consecuencia práctica:** `test:integration` ahora necesita Docker/Postgres
+corriendo (igual que `test:auth-cutover-rehearsal` ya lo necesitaba desde
+Fase 7) — deja de ser ejecutable "en cualquier máquina sin dependencias
+externas", el trade-off que esta ADR aceptaba originalmente a favor de
+SQLite. Se acepta conscientemente: el usuario de este proyecto ya trabaja
+con Docker/Postgres real de forma rutinaria.
+
 ## Consequences
 
 - El dominio (`UsersService`) depende de un `Repository<UserEntity>` inyectado
@@ -109,9 +148,6 @@ alguien desactivó a propósito).
 
 ## Trade-offs
 
-Tener dos "motores" de base de datos activos (Postgres real, SQLite en tests)
-es una fuente conocida de divergencia (tipos de columna, comportamiento SQL
-específico de cada motor); se acepta porque las entidades de este proyecto son
-deliberadamente simples y no usan features específicas de Postgres todavía. Si
-eso deja de ser cierto, migrar los tests de integración a un Postgres real
-(vía contenedor) debe priorizarse.
+~~Tener dos "motores" de base de datos activos...~~ — **resuelto**, ver
+"Actualización 2026-09-01" arriba: un solo motor (PostgreSQL) en todo
+entorno, sin divergencia posible.

@@ -24,7 +24,7 @@ describe('users & roles (integration)', () => {
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({ imports: [AppModule] }).compile();
-    app = moduleFixture.createNestApplication();
+    app = moduleFixture.createNestApplication({ bodyParser: false });
     configureApp(app, app.get(ConfigService<Env, true>));
     await app.init();
 

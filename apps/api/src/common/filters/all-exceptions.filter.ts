@@ -32,14 +32,11 @@ const STATUS_TITLES: Record<number, string> = {
  */
 /**
  * Postgres driver error codes: 23505 = unique_violation, 23503 =
- * foreign_key_violation. SQLite (better-sqlite3, used in tests —
- * docs/adr/010) reports the same two classes as `SQLITE_CONSTRAINT_UNIQUE`
- * and `SQLITE_CONSTRAINT_FOREIGNKEY`. Both engines see the same entity
- * decorators (docs/adr/011), so the same `QueryFailedError` shape reaches
- * here regardless of which one is running.
+ * foreign_key_violation (docs/adr/010 — every environment, including tests,
+ * runs against real PostgreSQL as of "Actualización 2026-09-01").
  */
-const UNIQUE_VIOLATION_CODES = new Set(['23505', 'SQLITE_CONSTRAINT_UNIQUE']);
-const FOREIGN_KEY_VIOLATION_CODES = new Set(['23503', 'SQLITE_CONSTRAINT_FOREIGNKEY']);
+const UNIQUE_VIOLATION_CODES = new Set(['23505']);
+const FOREIGN_KEY_VIOLATION_CODES = new Set(['23503']);
 
 function driverErrorCode(driverError: Error): string | undefined {
   // `driverError` is typed as a plain `Error` (TypeORM's default generic

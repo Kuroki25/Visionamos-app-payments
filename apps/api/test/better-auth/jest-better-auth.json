@@ -1,0 +1,12 @@
+{
+  "moduleFileExtensions": ["js", "mjs", "json", "ts"],
+  "rootDir": "../..",
+  "testEnvironment": "node",
+  "testRegex": "test/better-auth/.*\\.pg-e2e\\.ts$",
+  "setupFiles": ["<rootDir>/test/better-auth/setup-env.ts"],
+  "transform": {
+    "^.+\\.(t|j)s$": "ts-jest",
+    "^.+\\.mjs$": "ts-jest"
+  },
+  "transformIgnorePatterns": []
+}

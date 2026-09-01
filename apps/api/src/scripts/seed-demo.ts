@@ -3,6 +3,7 @@ import * as argon2 from 'argon2';
 import { randomUUID } from 'node:crypto';
 
 import { AppDataSource } from '../config/data-source';
+import { createBetterAuthIdentity } from '../infra/better-auth/create-better-auth-identity';
 import { CategoryEntity } from '../modules/categories/entities/category.entity';
 import { CommerceEntity } from '../modules/commerces/entities/commerce.entity';
 import { FormDefinitionEntity } from '../modules/forms/entities/form-definition.entity';
@@ -271,7 +272,9 @@ async function main(): Promise<void> {
       // --- Admin users, one per role/scope (docs/adr/011 §4 creation matrix) ---
       async function createUser(email: string, fullName: string) {
         const passwordHash = await argon2.hash(DEMO_PASSWORD);
-        return users.save(users.create({ email, fullName, passwordHash, status: 'ACTIVE' }));
+        const userId = randomUUID(); // Better Auth's `user` row must exist before `users.id` can reference it (FK).
+        await createBetterAuthIdentity(manager, { userId, email, fullName, passwordHash });
+        return users.save(users.create({ id: userId, email, fullName, status: 'ACTIVE' }));
       }
 
       const adminPortalAvanzaUser = await createUser('admin.avanza@example.com', 'Admin Portal Avanza');

@@ -33,8 +33,24 @@ export class TestSession {
     return new TestSession(agent, extractCookie(res, 'csrf_token'));
   }
 
+  /**
+   * Better Auth's own HTTP surface (docs/adr/013-better-auth-migration.md,
+   * "Integración con NestJS") — deliberately NOT `/api/v1/auth/login` (the
+   * legacy JWT endpoint; still reachable until the JWT retirement pass, but
+   * the cookie it sets means nothing to `BetterAuthSessionGuard`, the guard
+   * that actually runs now). No `X-CSRF-Token` header: `/api/auth/*` is
+   * Better Auth's own raw Express route, entirely outside Nest's
+   * `CsrfGuard`. `this.agent` (a supertest agent) persists whatever
+   * `Set-Cookie` this returns automatically, same as it always did for the
+   * legacy JWT cookie — every subsequent request on this session carries it.
+   */
   login(email: string, password: string) {
-    return this.post('/api/v1/auth/login').send({ email, password });
+    return this.agent.post('/api/auth/sign-in/email').send({ email, password });
+  }
+
+  /** Better Auth's own sign-out — same reasoning as `login()` above: `/api/auth/*`, not `/api/v1/auth/logout`, no CSRF header. */
+  logout() {
+    return this.agent.post('/api/auth/sign-out').send({});
   }
 
   get(url: string) {

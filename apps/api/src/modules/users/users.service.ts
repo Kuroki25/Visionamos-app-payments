@@ -2,11 +2,13 @@ import { ConflictException, ForbiddenException, Injectable, NotFoundException } 
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import type { CreateUser, ScopeType, UpdateUser, User } from '@repo/contracts';
 import * as argon2 from 'argon2';
+import { randomUUID } from 'node:crypto';
 import type { DataSource, Repository } from 'typeorm';
 
 import type { AuthenticatedRequestUser } from '../auth/types/authenticated-request-user.type';
 import { AuditService } from '../audit/audit.service';
 import { CommerceEntity } from '../commerces/entities/commerce.entity';
+import { createBetterAuthIdentity } from '../../infra/better-auth/create-better-auth-identity';
 import { RoleAssignmentEntity } from '../role-assignments/entities/role-assignment.entity';
 import { ScopeAuthorizationService } from '../role-assignments/scope-authorization.service';
 import { UserEntity } from './entities/user.entity';
@@ -77,14 +79,31 @@ export class UsersService {
     }
 
     const passwordHash = await argon2.hash(input.password);
+    // Generated here, not left to the database, because Better Auth's
+    // `user` row (created first, below) must exist before `users.id` can
+    // reference it — `users.id` is a plain FK column since the cutover
+    // (`UserEntity`, `FOREIGN KEY (id) REFERENCES "user"(id)`), no longer
+    // self-generated.
+    const userId = randomUUID();
 
     return this.dataSource.transaction(async (manager) => {
       const userRepo = manager.getRepository(UserEntity);
       const assignmentRepo = manager.getRepository(RoleAssignmentEntity);
 
-      const user = await userRepo.save(
-        userRepo.create({ email: input.email, fullName: input.fullName, passwordHash, status: 'ACTIVE' }),
-      );
+      // Must exist before the `users` row below (FK) — also the only place
+      // this user's credential lives now (Better Auth's `account.password`,
+      // docs/adr/013 "Contraseñas"). Without this the user could never sign
+      // in — the gap was designed for but never wired in until the cutover
+      // surfaced it via failing e2e tests, see
+      // docs/backend/authentication/BETTER_AUTH_CUTOVER_SOURCE_OF_TRUTH.md.
+      await createBetterAuthIdentity(manager, {
+        userId,
+        email: input.email,
+        fullName: input.fullName,
+        passwordHash,
+      });
+
+      const user = await userRepo.save(userRepo.create({ id: userId, email: input.email, fullName: input.fullName, status: 'ACTIVE' }));
 
       const assignment = await assignmentRepo.save(
         assignmentRepo.create({
@@ -184,24 +203,11 @@ export class UsersService {
   }
 
   /**
-   * The only place `passwordHash` is ever selected — used exclusively by
-   * AuthService to verify credentials at login. Returns the raw entity (not
-   * the public `User` shape) so the hash never leaks past this module.
-   */
-  async findEntityByEmailWithPassword(email: string): Promise<UserEntity | null> {
-    return this.usersRepository
-      .createQueryBuilder('user')
-      .addSelect('user.passwordHash')
-      .where('user.email = :email', { email })
-      .getOne();
-  }
-
-  /**
    * Public (unlike the rest of this module's per-user methods) — no BOLA/
-   * scope check, because it isn't an admin action. AuthService uses it to
-   * resolve "who does this refresh token belong to, and are they still
-   * active" during `/auth/refresh` (docs/adr/011 §3), which is a system
-   * operation, not an admin browsing another admin's record.
+   * scope check, because it isn't an admin action. `BetterAuthSessionGuard`
+   * uses it to resolve role/scope fresh on every authenticated request
+   * (docs/adr/013-better-auth-migration.md), which is a system operation,
+   * not an admin browsing another admin's record.
    */
   async loadUserWithAssignment(id: string): Promise<{ user: UserEntity; assignment: RoleAssignmentEntity }> {
     const user = await this.usersRepository.findOneBy({ id });

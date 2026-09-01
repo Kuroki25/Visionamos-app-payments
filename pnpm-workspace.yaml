@@ -33,10 +33,6 @@ disallowWorkspaceCycles: true
 # each one that legitimately needs to run a native build step is explicitly
 # allow-listed below after review (docs/DEPENDENCY_POLICY.md).
 allowBuilds:
-  # Test-only native SQLite bindings (apps/api uses this in NODE_ENV=test
-  # instead of Postgres — docs/adr/010-persistence.md). Needs its build step
-  # to compile/download the native addon; without it the test suite can't run.
-  better-sqlite3: true
   # Native Argon2id bindings used for password hashing (docs/adr/006).
   argon2: true
   # Telemetry/analytics install-script (no functional purpose for this repo).
@@ -45,6 +41,19 @@ allowBuilds:
   # when its build is skipped (same default Next.js itself ships in a fresh
   # create-next-app monorepo scaffold).
   unrs-resolver: false
+  # Transitive dependency of better-auth's bundled (unused) Prisma adapter
+  # (docs/adr/013-better-auth-migration.md — this repo uses better-auth's
+  # raw `pg.Pool`/Kysely path, never Prisma). Its postinstall runs `prisma
+  # generate` against a `schema.prisma` file that doesn't exist in this
+  # repo, so it would only fail or no-op — no functional purpose here.
+  '@prisma/client': false
+  # Optional dependency of both typeorm@1.1.0 (an optional driver it lists
+  # regardless of which one is actually configured) and better-auth's
+  # bundled sqlite adapter — not a direct dependency of this repo since
+  # docs/adr/010-persistence.md "Actualización 2026-09-01" removed the
+  # SQLite test path (every environment, including tests, uses real
+  # PostgreSQL now). No functional purpose here.
+  better-sqlite3: false
 
 # pnpm 11 auto-populated this the first time `pnpm install` ran, to gate
 # adoption of very-recently-published package versions by default (a

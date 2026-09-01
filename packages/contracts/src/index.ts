@@ -10,9 +10,6 @@ export type { Role, ScopeType, EntityStatus } from './roles';
 export { CreateUserSchema, UpdateUserSchema, UpdateUserStatusSchema, UserSchema, PasswordSchema } from './users';
 export type { CreateUser, UpdateUser, UpdateUserStatus, User } from './users';
 
-export { LoginSchema } from './auth';
-export type { Login } from './auth';
-
 export { addRoleScopeChecks, ReassignScopeSchema, RoleAssignmentSchema } from './role-assignments';
 export type { ReassignScope, RoleAssignment } from './role-assignments';
 

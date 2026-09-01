@@ -11,7 +11,11 @@ import { configureApp } from './config/configure-app';
 import type { Env } from './config/env.schema';
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  // bodyParser: false — configureApp() mounts Better Auth's own HTTP
+  // handler, which needs to read the raw request body itself, before
+  // Nest's automatic parser would otherwise consume it first (see
+  // configureApp's docblock).
+  const app = await NestFactory.create(AppModule, { bufferLogs: true, bodyParser: false });
   app.useLogger(app.get(Logger));
 
   const config = app.get(ConfigService<Env, true>);

@@ -40,10 +40,10 @@ export const EnvSchema = z.object({
 
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
 
-  // PostgreSQL via TypeORM (docs/adr/010-persistence.md). In NODE_ENV=test the
-  // app uses an in-memory SQLite database instead (see database.module.ts) so
-  // the test suite never needs a live Postgres — these variables are simply
-  // unused in that mode.
+  // PostgreSQL via TypeORM (docs/adr/010-persistence.md). Every environment,
+  // including tests, connects to real PostgreSQL as of "Actualización
+  // 2026-09-01" — the in-memory SQLite test path was removed (Better Auth's
+  // own tables never existed there).
   DB_HOST: z.string().default('localhost'),
   DB_PORT: z.coerce.number().int().positive().default(5442),
   DB_USERNAME: z.string().default('visionamos'),
@@ -51,16 +51,24 @@ export const EnvSchema = z.object({
   DB_NAME: z.string().default('visionamos'),
   DB_SSL: booleanFromEnv(false),
 
-  // Authentication (docs/adr/006-authentication-strategy.md). No defaults on
-  // purpose — a missing signing secret must fail startup loudly, never fall
-  // back to a guessable value. Separate secrets for access vs refresh tokens
-  // so a leaked access-token key can't be used to forge refresh tokens.
-  JWT_ACCESS_SECRET: z.string().min(32, 'JWT_ACCESS_SECRET must be at least 32 characters.'),
-  JWT_REFRESH_SECRET: z.string().min(32, 'JWT_REFRESH_SECRET must be at least 32 characters.'),
-  JWT_ACCESS_TTL: z.string().default('15m'),
-  JWT_REFRESH_TTL_DAYS: z.coerce.number().int().positive().default(7),
-  // Cookies must be Secure (HTTPS-only) outside local development.
+  // Cookies must be Secure (HTTPS-only) outside local development. Still
+  // read directly by CsrfCookieMiddleware (docs/adr/006) — Better Auth's
+  // own session cookie manages its `secure` attribute itself
+  // (docs/adr/013-better-auth-migration.md, derived from `baseURL`/`NODE_ENV`,
+  // not this variable).
   COOKIE_SECURE: booleanFromEnv(true),
+
+  // Better Auth (docs/adr/013-better-auth-migration.md) — the only
+  // authentication mechanism since the cutover; JWT_ACCESS_SECRET/
+  // JWT_REFRESH_SECRET/JWT_ACCESS_TTL (docs/adr/006, retired) no longer
+  // exist. No default on BETTER_AUTH_SECRET on purpose — a missing signing
+  // secret must fail startup loudly, never fall back to a guessable value.
+  BETTER_AUTH_SECRET: z.string().min(32, 'BETTER_AUTH_SECRET must be at least 32 characters.'),
+  BETTER_AUTH_URL: z.string().url().default('http://localhost:4100'),
+  // Session TTL — one server-side session now replaces what used to be both
+  // the access and refresh JWTs (docs/adr/013, "Sesiones"). Renamed from
+  // JWT_REFRESH_TTL_DAYS (its meaning changed, not just its owner).
+  BETTER_AUTH_SESSION_TTL_DAYS: z.coerce.number().int().positive().default(7),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

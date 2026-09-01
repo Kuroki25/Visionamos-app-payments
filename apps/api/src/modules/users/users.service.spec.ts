@@ -67,6 +67,12 @@ describe('UsersService', () => {
         if (entity === RoleAssignmentEntity) return roleAssignmentsRepository;
         return createMockRepository();
       }),
+      // createBetterAuthIdentity (docs/adr/013) issues two raw INSERTs
+      // against Better Auth's user/account tables via manager.query — not
+      // exercised by assertions here (that's Postgres-only, covered by the
+      // real e2e suite), just needs to resolve so the transaction callback
+      // completes.
+      query: jest.fn().mockResolvedValue(undefined),
     };
     const mockDataSource = { transaction: jest.fn((cb: (manager: unknown) => unknown) => cb(mockManager)) };
 
