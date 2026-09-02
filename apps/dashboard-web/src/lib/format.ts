@@ -22,6 +22,11 @@ export function formatCOP(amount: number): string {
   return '$' + Math.round(amount).toLocaleString('es-CO');
 }
 
+/** `count === 1 ? singular : plural` — Spanish has no automatic pluralization rule simple enough to derive from one form, so callers pass both. */
+export function pluralize(count: number, singular: string, plural: string): string {
+  return count === 1 ? singular : plural;
+}
+
 /** `DD/MM/YYYY` in `es-CO`, matching the mock's transaction row date format. */
 export function formatDateEs(iso: string): string {
   return new Intl.DateTimeFormat('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(

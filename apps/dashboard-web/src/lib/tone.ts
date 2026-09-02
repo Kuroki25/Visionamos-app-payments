@@ -30,3 +30,11 @@ export const toneTextClasses: Record<Tone, string> = {
   accent: 'text-(--color-accent)',
   neutral: 'text-(--color-fg-soft)',
 };
+
+/** Solid (not soft/tint) background — for small indicator dots (toasts, list bullets). */
+export const toneSolidBgClasses: Record<Tone, string> = {
+  success: 'bg-(--color-success)',
+  danger: 'bg-(--color-danger)',
+  accent: 'bg-(--color-accent)',
+  neutral: 'bg-(--color-fg-faint)',
+};
