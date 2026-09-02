@@ -18,4 +18,11 @@ export const DEMO_USERS = {
   adminUniversidadAvanza: { email: 'admin.universidad-avanza@example.com', password: DEMO_PASSWORD },
   /** VIEWER, scoped to portal "Avanza". */
   viewerAvanza: { email: 'viewer.avanza@example.com', password: DEMO_PASSWORD },
+  /**
+   * SUPERADMIN, GLOBAL scope — a dedicated E2E-only account, never the
+   * original bootstrap SUPERADMIN (unknown password, never touched — see
+   * `apps/api/src/scripts/seed-e2e-superadmin.ts`'s docblock and
+   * `docs/frontend/DASHBOARD_SOURCE_OF_TRUTH.md` §11.3/§7.2).
+   */
+  superadmin: { email: 'e2e-superadmin@example.com', password: DEMO_PASSWORD },
 } as const;

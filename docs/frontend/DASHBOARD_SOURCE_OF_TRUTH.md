@@ -8,11 +8,11 @@ documento". No se crean documentos adicionales sin necesidad real.
 
 **Última validación real de extremo a extremo**: 2026-09-02, contra
 `apps/api` + PostgreSQL reales corriendo localmente (Docker,
-`docker-compose.yml`), datos de `pnpm --filter api seed:demo`, y la
-suite `apps/dashboard-web/e2e/*.spec.ts` (8/8 verde, incluyendo la
-regresión de accesibilidad de `e2e/accessibility.spec.ts` añadida en el
-cierre del P1 de §12). Ver §9 para el detalle de qué se verificó
-realmente vs. qué quedó inferido.
+`docker-compose.yml`), datos de `pnpm --filter api seed:demo` +
+`seed:e2e-superadmin`, y las suites `apps/dashboard-web/e2e/*.spec.ts`
+(9/9 verde) + `e2e/visual.spec.ts` (20/20 verde, 3 viewports). **Cierre
+técnico del frontend: COMPLETED** — ver §16. Ver §9 para el detalle de
+qué se verificó realmente vs. qué quedó inferido.
 
 ## 1. Propósito
 
@@ -161,19 +161,29 @@ por rol en la UI) y el backend lo rechaza igual con un 403 real.
 | `ADMIN_COMMERCE` (Universidad Avanza) → otro comercio del **mismo** portal | 403 real — el scope de `ADMIN_COMMERCE` es más granular que el portal, confirmado |
 | `VIEWER` → lectura de `/portales` | OK |
 | `VIEWER` → `POST /portals` (vía el modal, que sigue visible) | 403 real, mensaje real mostrado en el modal |
+| `SUPERADMIN` (GLOBAL) → `GET /portals` | Ve los 3 portales reales (Avanza/Otrahuilca/Coopenjo), no solo el propio |
+| `SUPERADMIN` → portal de Otrahuilca (403 real para `ADMIN_PORTAL` arriba) | Acceso real correcto — misma URL, mismo guard, resultado real distinto |
+| `SUPERADMIN` → comercio Hotel Avanza Plaza (403 real para `ADMIN_COMMERCE` en otro caso) | Acceso real correcto |
+| `SUPERADMIN` → `PATCH /portals/:id` sobre Otrahuilca (fuera del scope de cualquier `ADMIN_PORTAL` sembrado) | 200 real — operación administrativa real autorizada, no solo un botón visible |
 
 Roles reales (`@repo/contracts`, `roles.ts`): `SUPERADMIN`,
 `ADMIN_PORTAL`, `ADMIN_COMMERCE`, `VIEWER`. El catálogo de 5 roles del
 mock de Claude Design (incluye un rol genérico "Administrador" y
 "Comercio") **no es real** — `content/es/roles.ts` mapea los 4 reales.
 
-`SUPERADMIN` no se probó con login real fresco (contraseña sembrada
-desconocida — no está en `apps/api/.env`, que ya no trae
-`SUPERADMIN_PASSWORD`, y el script de seed es idempotente: no la
-resetea). Su enforcement se verificó indirectamente: `ADMIN_PORTAL`
-recibió un 403 real intentando `POST /portals` (`@Roles('SUPERADMIN')`),
-confirmando que `RolesGuard` funciona; el camino de éxito de SUPERADMIN
-queda **INFERIDO**, no verificado con una sesión propia.
+**`SUPERADMIN` — ya VERIFICADO con sesión propia, no inferido** (cierre
+del gap dejado por la pasada anterior). El bootstrap SUPERADMIN
+original sigue sin probarse con login fresco (contraseña sembrada
+desconocida, nunca en `apps/api/.env`, y su script de seed es
+idempotente por diseño — no la resetea) y **nunca se tocó**: en vez de
+eso, `apps/api/src/scripts/seed-e2e-superadmin.ts` crea un SEGUNDO
+SUPERADMIN dedicado, exclusivamente para E2E (`e2e-superadmin@example.com`,
+misma contraseña literal que el resto de usuarios demo — no un secreto
+nuevo). `e2e/superadmin.spec.ts` (REAL E2E, 1/1 verde) demuestra login →
+sesión Better Auth real → identidad `Superadministrador` visible → acceso
+global real (portal/aliado que otros roles reciben 403 reales en
+`rbac.spec.ts`) → `PATCH` real autorizado → logout → sesión
+verdaderamente inválida.
 
 ### 7.3 `proxy.ts` — sigue sin existir, deliberadamente
 
@@ -323,12 +333,12 @@ nombres/datos que vienen del backend. Sin librería de i18n (deliberado).
 | Categoría | Dónde | Qué verifica |
 |---|---|---|
 | UNIT | `src/**/*.test.ts(x)` (40 tests) | Funciones puras de mapeo (`Transaction`→fila, `Commerce`→fila, formato, tono, `translateAuthErrorMessage`) y un componente presentacional |
-| **E2E REAL** | `e2e/*.spec.ts` (8 tests) | Login real, sesión real (cookie `httpOnly`), refresh, nav directa, back/forward, logout real, RBAC/scope real (4 escenarios contra el backend real), regresión de teclado/accesibilidad (1 escenario) — ver §11.2 |
-| MOCKED/VISUAL | Harness temporal `app/qa-preview/**` usado durante desarrollo para capturas | **Se borra siempre antes de terminar cada pantalla** — nunca convive con código real ni con REAL E2E. No queda ningún rastro en el repo hoy (verificar con `git status`/`find` si se sospecha lo contrario) |
+| **E2E REAL** | `e2e/*.spec.ts` (9 tests: `home`, `auth`×2, `rbac`×4, `accessibility`, `superadmin`) | Login real, sesión real (cookie `httpOnly`), refresh, nav directa, back/forward, logout real, RBAC/scope real (4 escenarios + SUPERADMIN, ver §7.2), regresión de teclado/accesibilidad — ver §11.2 |
+| **VISUAL REGRESSION** | `e2e/visual.spec.ts` bajo 3 proyectos Playwright dedicados (`visual-desktop/tablet/mobile`, 20 screenshots) | Ver §14 — ya implementado, deja de ser recomendación |
+| MOCKED/VISUAL (ad-hoc) | Harness temporal `app/qa-preview/**` usado durante el handoff original para capturas manuales | **Se borra siempre antes de terminar cada pantalla** — nunca convive con código real ni con REAL E2E. No queda ningún rastro en el repo hoy. Distinto de `e2e/visual.spec.ts` arriba, que sí es código permanente committeado |
 | INTEGRATION | No existe hoy en este app (sí en `apps/api`) | — |
-| ACCESSIBILITY | `e2e/accessibility.spec.ts` (1 test, permanente) + verificación manual con Playwright (teclado, `getByRole`) durante esta fase para lo no cubierto por esa suite | Ver §12 |
-| RESPONSIVE | Verificación manual con Playwright (3 viewports) durante esta fase — no es una suite permanente | Ver §13 |
-| VISUAL REGRESSION | No implementado como snapshots de Playwright — ver §14 (recomendación, no gap crítico) | — |
+| ACCESSIBILITY | `e2e/accessibility.spec.ts` (1 test, permanente) + verificación manual con Playwright (teclado, `getByRole`) durante la fase anterior para lo no cubierto por esa suite | Ver §12 |
+| RESPONSIVE | `e2e/visual.spec.ts` (3 viewports, permanente, ver §14) + verificación manual `scrollWidth`/`clientWidth` puntual durante esta fase | Ver §13 |
 
 **Regla permanente**: un bug real corregido en este proyecto obtiene un
 test de regresión cuando es razonablemente automatizable. Ejemplos ya
@@ -354,26 +364,41 @@ reales durante la fase de verificación manual — no forma parte de los
 specs commiteados como mutación repetible; los specs commiteados solo
 mutan lo estrictamente necesario para probar el rechazo real (un intento
 de `POST /portals` como VIEWER, que el backend rechaza — no persiste
-nada). Un usuario E2E dedicado (`e2e-password-lifecycle@example.com`)
-quedó creado en la base de datos de desarrollo local durante la
-verificación de ciclo de vida de contraseña (§ "Fase 12" del cierre
-técnico) — no se tocó ninguna cuenta de demo pre-existente para esa
-prueba, tal como exige la regla de no cambiar contraseñas de cuentas
-importantes.
+nada) o una mutación real idempotente (SUPERADMIN renombra un portal a
+su propio nombre — ver §7.2/§11.4). Un usuario E2E dedicado
+(`e2e-password-lifecycle@example.com`) quedó creado en la base de datos
+de desarrollo local durante la verificación de ciclo de vida de
+contraseña (§ "Fase 12" del cierre técnico) — no se tocó ninguna cuenta
+de demo pre-existente para esa prueba, tal como exige la regla de no
+cambiar contraseñas de cuentas importantes. La misma regla es por lo que
+`e2e-superadmin@example.com` (§7.2, §11.4) existe como cuenta aparte en
+vez de resetear la contraseña del SUPERADMIN original.
 
-### 11.3 Qué NO se verificó (ser honestos, no inflar cobertura)
+### 11.4 SUPERADMIN E2E — estrategia de credenciales
 
-- Login/mutaciones de `SUPERADMIN` con sesión propia (contraseña
-  sembrada desconocida) — ver §7.2.
+`apps/api/src/scripts/seed-e2e-superadmin.ts` (`pnpm --filter api
+seed:e2e-superadmin`, idempotente — sale si el email ya existe) crea un
+SEGUNDO SUPERADMIN dedicado y reproducible: mismo patrón de
+repositorio directo que `seed-demo.ts`/`seed-superadmin.ts`
+(docs/adr/010), misma contraseña literal ya committeada
+(`DEMO_PASSWORD`) — no un secreto nuevo, nunca en `.env`/`.env.example`.
+El SUPERADMIN original (bootstrap) nunca se tocó: ni se leyó su
+contraseña (desconocida) ni se reseteó. `e2e/fixtures.ts` expone
+`DEMO_USERS.superadmin` con este email dedicado.
+
+### 11.5 Qué NO se verificó (ser honestos, no inflar cobertura)
+
 - Envío real de correo (recuperar contraseña) — sin proveedor
   configurado, la función es honestamente inerte.
-- Rate limiting (`ThrottlerGuard`, 100 req/60s por defecto) bajo carga
-  real — no se generó el volumen de requests necesario para disparrarlo.
-- Snapshots de regresión visual automatizados (no implementados, ver
-  §14).
 - Integración con `docs/business/ROLE_PERMISSION_MATRIX.md` más allá de
-  los 4 escenarios de §7.2 — la matriz completa de permisos por rol no
-  se auditó campo por campo.
+  los escenarios de §7.2 — la matriz completa de permisos por rol no se
+  auditó campo por campo.
+- Rate limiting bajo carga real de USUARIO — sí se disparó una vez
+  **por accidente** construyendo `e2e/visual.spec.ts` (18 logins
+  paralelos en una ventana corta), confirmando que `ThrottlerGuard`
+  funciona de verdad contra tráfico real (no solo leído en código); la
+  causa (demasiados logins redundantes del propio test) se corrigió con
+  `auth.setup.ts` + `storageState` (§14), no tocando el límite.
 
 ## 12. Accesibilidad — hallazgos reales y corregidos
 
@@ -401,31 +426,95 @@ Verificado manualmente con Playwright (navegación 100% por teclado,
   contra el backend real vía `PerfilTab`) — la misma corrección genérica
   no se re-verifica cinco veces por separado, ver el comentario del
   archivo. `pnpm --filter dashboard-web typecheck|lint|test:unit|build`
-  y la suite completa de `e2e/*.spec.ts` (8/8) verdes tras el cambio.
+  y la suite completa de `e2e/*.spec.ts` (9/9) verdes tras el cambio.
 - No se instaló ninguna librería de accesibilidad nueva.
 
-## 13. Responsive — verificado, sin overflow horizontal
+## 13. Responsive — verificado, sin overflow horizontal, con regresión permanente
 
-Playwright, 3 viewports (1440×900 desktop, 834×1112 tablet, 390×844
-mobile), páginas `/login`, `/` (Inicio) y `/portales` (la tabla más
-ancha): `document.documentElement.scrollWidth >
-document.documentElement.clientWidth` → `false` en los 9 casos. Las
-tablas ya usaban `overflow-x-auto` propio (`components/ui/TxTable.tsx` y
-similares) — sin necesidad de cambios para esta verificación. No se
-determinó si el sidebar debería colapsar automáticamente en mobile (hoy
-requiere el toggle manual) — queda como mejora P2, no como defecto.
+`e2e/visual.spec.ts` (§14) corre bajo 3 viewports Playwright reales —
+1440×900 desktop, 834×1112 tablet, 390×844 mobile, los mismos ya usados
+en la verificación manual de la pasada anterior — para 6 de las 8
+pantallas (ver §14 para cuáles). Además, durante esta fase se repitió
+puntualmente la medición real `document.documentElement.scrollWidth >
+document.documentElement.clientWidth` con datos y sesión reales
+(SUPERADMIN) en `/`, `/portales` y `/usuarios` a 390px: `false` en los 3
+casos — sin overflow horizontal a nivel de documento.
 
-## 14. Visual regression — no implementado como snapshots automatizados
+**Hallazgo real, no un defecto nuevo**: los baselines mobile de
+`portales`/`usuarios` muestran encabezados envueltos en varias líneas y
+contenido recortado visualmente — confirmado que es el contenedor
+interno con scroll horizontal propio (mismo patrón que
+`components/ui/TxTable.tsx`) mostrando su estado inicial sin scrollear,
+no una fuga de overflow del documento (medido arriba). Es la
+manifestación visual del gap P2 ya documentado: el sidebar no colapsa
+automáticamente en mobile (hoy requiere el toggle manual). Sigue sin
+ser un defecto — ahora con un baseline que avisará si empeora (overflow
+real) en un cambio futuro.
 
-Las comparaciones contra el diseño aprobado se hicieron manualmente
-(capturas Playwright ad-hoc durante cada pantalla, comparadas
-visualmente contra Claude Design, nunca comprometidas al repo).
-Recomendación no implementada en esta fase: convertir un subconjunto de
-esas capturas en snapshots baseline de `@playwright/test`
-(`toHaveScreenshot()`) para las pantallas ya aprobadas, con la regla de
-nunca actualizar un baseline automáticamente ante un fallo — solo tras
-confirmar que el diseño aprobado realmente cambió. No se implementó por
-alcance/tiempo, no por bloqueo técnico.
+## 14. Visual regression — implementado con Playwright screenshot assertions
+
+`e2e/visual.spec.ts`, 3 proyectos Playwright dedicados en
+`playwright.config.ts` (`visual-desktop`/`visual-tablet`/`visual-mobile`,
+viewports de §13) — `toHaveScreenshot()`, no una plataforma externa.
+Ejecutar: `pnpm --filter dashboard-web test:e2e:visual` (o
+`test:e2e` sin filtro, que corre REAL E2E + visual + el login de
+`auth.setup.ts` en una sola invocación).
+
+**Matriz página × viewport** (20 baselines reales, `e2e/visual.spec.ts-snapshots/`):
+
+| Pantalla | Desktop | Tablet | Mobile |
+|---|---|---|---|
+| `/login` | ✅ | ✅ | ✅ |
+| `/` (Dashboard/Inicio) | ✅ | ✅ | ✅ |
+| `/portales` | ✅ | ✅ | ✅ |
+| `/portales/[portalId]` (Avanza) | ✅ | ✅ | ✅ |
+| `/portales/[portalId]/aliados/[aliadoId]` (Universidad Avanza) | ✅ | ✅ | ✅ |
+| `/usuarios` | ✅ | ✅ | ✅ |
+| `/transacciones` | ✅ | — | — |
+| `/configuracion` | ✅ | — | — |
+
+`transacciones`/`configuracion` quedan desktop-only a propósito: sus
+primitivas de layout (tabla de datos, tabs/formularios simples) ya se
+ejercitan a los 3 viewports vía `portales`/`usuarios` y `configuracion`
+respectivamente — una segunda y tercera copia sería peso de suite
+redundante, no cobertura de riesgo nueva (instrucción explícita: no
+multiplicar cada pantalla por cada tamaño sin necesidad).
+
+**Autenticación de las capturas**: `e2e-superadmin` (§11.4) vía
+`auth.setup.ts`, un solo login reutilizado por los 3 proyectos
+(`dependencies`/`storageState`, patrón recomendado por Playwright) — no
+un login por captura. Se eligió tras encontrar un problema real: loguear
+fresco en cada una de las 18 combinaciones (6 pantallas × 3 viewports)
+disparó el `ThrottlerGuard` real del backend bajo la paralelización por
+defecto de Playwright (§11.5) — la corrección fue reducir la carga
+redundante, nunca tocar el límite. SUPERADMIN se usa porque es el único
+rol que llega a las 8 pantallas sin ningún 403 por scope, evitando que
+un baseline "aprobado" termine siendo por accidente el estado 403 de un
+rol con permisos insuficientes.
+
+**Estabilidad**: `buildChart()` (gráfico de Inicio) es una función pura
+sobre constantes fijas; `formatDateEs` renderiza `DD/MM/YYYY` absoluto
+(no relativo a "ahora"); los montos/fechas de la semilla están fijos
+desde que se sembraron — así que ninguna pantalla depende de reloj,
+`Math.random()` en render, ni conteos que cambien entre corridas. Cada
+captura espera `document.fonts.ready` y `networkidle` antes de disparar.
+`toHaveScreenshot()` deshabilita animaciones CSS por defecto. Se agregó
+una tolerancia real (`maxDiffPixelRatio: 0.03`, `playwright.config.ts`)
+tras observar un ~2-3% de diferencia de sub-pixel (antialiasing de texto/
+SVG) específicamente en la primera página que renderiza cada worker tras
+cargar `storageState` (Inicio) — verificado corriendo la suite dos veces
+seguidas tras el ajuste: 20/20 verde ambas veces, sin flakiness. Una
+regresión visual real (layout roto, componente faltante, color
+incorrecto) produce muchísimo más del 3% de diferencia, así que esta
+tolerancia no oculta regresiones — absorbe ruido de renderizado, no
+comportamiento de la aplicación.
+
+**Regla de baseline**: un diff nunca se resuelve con
+`--update-snapshots` automático. Ante un fallo: 1) inspeccionar el
+`-diff.png` adjunto al reporte; 2) determinar regresión vs. cambio de
+diseño intencional; 3) corregir código si es regresión; 4) actualizar el
+baseline solo si Claude Design realmente cambió esa pantalla — y
+documentarlo aquí.
 
 ## 15. Seguridad — verificado contra el servidor real
 
@@ -443,7 +532,9 @@ Evidencia real (no inferida) recolectada contra `apps/api` corriendo:
 - **CSRF**: ver §8.1 — bug real encontrado y corregido, no un control
   debilitado para pasar una prueba.
 - **Rate limiting**: `X-RateLimit-*` presentes (100/60s por defecto),
-  confirmado en headers reales; no se probó el límite bajo carga (§11.3).
+  confirmado en headers reales; disparado de verdad bajo carga real
+  (por accidente, construyendo `e2e/visual.spec.ts` — §11.5/§14), no solo
+  leído en headers.
 - **Logging**: `nestjs-pino` redacta `authorization`, `cookie`,
   `set-cookie`, `x-csrf-token` — confirmado en `app.module.ts`, no se
   inspeccionaron logs en vivo en esta fase.
@@ -466,25 +557,47 @@ La aplicación NO se considera cerrada solo porque `lint`/`typecheck`/
 
 | Requisito | Estado |
 |---|---|
-| Better Auth real (login/sesión/logout) | ✅ VERIFICADO (E2E real) |
+| Better Auth real (login/sesión/logout) | ✅ VERIFICADO (E2E real, los 4 roles incluido SUPERADMIN) |
 | API real (lecturas/escrituras) | ✅ VERIFICADO (E2E real + manual) |
 | PostgreSQL real | ✅ VERIFICADO (`GET /health` → `database: up`, datos reales leídos) |
 | CORS/cookies reales | ✅ VERIFICADO (headers reales inspeccionados) |
 | CSRF | ✅ VERIFICADO Y CORREGIDO (bug real encontrado) |
-| RBAC/scopes (3 de 4 roles con login propio) | ✅ VERIFICADO; SUPERADMIN camino de éxito INFERIDO (§7.2) |
+| RBAC/scopes (4 de 4 roles con login propio) | ✅ VERIFICADO — SUPERADMIN con sesión real dedicada (§7.2/§11.4), ya no inferido |
 | 401 vs 403 | ✅ VERIFICADO, nunca mezclados |
-| Playwright E2E real | ✅ 8/8 verde contra backend real |
-| Cobertura unit | ✅ 40/40 verde |
-| Visual regression automatizada | ❌ NO IMPLEMENTADO (§14, recomendación) |
-| Responsive (3 viewports, sin overflow) | ✅ VERIFICADO manualmente |
-| Accesibilidad (teclado, labels, headings) | ✅ 4 bugs reales corregidos (incluye el P1 de Enter en modales/tabs, ahora con regresión E2E) |
-| Regresión para bugs reales encontrados | ✅ timezone, traducción de errores de auth (unit); CSRF y 403 (E2E) |
+| Playwright E2E real | ✅ 9/9 verde contra backend real |
+| Visual regression automatizada | ✅ IMPLEMENTADO — 20/20 verde, 3 viewports, `toHaveScreenshot()` (§14) |
+| Cobertura unit | ✅ 40/40 (dashboard-web) + 40/40 (api) verde |
+| Responsive (3 viewports, sin overflow) | ✅ VERIFICADO — ahora con regresión visual permanente, no solo manual (§13/§14) |
+| Accesibilidad (teclado, labels, headings) | ✅ 4 bugs reales corregidos, todos con regresión E2E |
+| Regresión para bugs reales encontrados | ✅ timezone, traducción de errores de auth (unit); CSRF, 403 y accesibilidad de formularios (E2E); visual (screenshot baselines) |
 | Lint/typecheck/build (monorepo) | ✅ verde |
+
+**Cierre técnico del frontend: COMPLETED** (2026-09-02). Los dos únicos
+pendientes P1 documentados por el cierre anterior — visual regression
+automatizada y el happy path E2E real de SUPERADMIN — están cerrados con
+evidencia real ejecutada (no inferida). No quedan gaps P0/P1 conocidos;
+los ítems restantes en §11.5 son mejoras P2 o están fuera del alcance de
+negocio actual (email real, matriz de permisos exhaustiva), no bloqueos.
 
 ## 17. Historial de este documento
 
-- **2026-09-02 (cierre P1)** — Cerrado el único pendiente P1 dejado por
-  el cierre técnico anterior (§12): `PortalForm`, `UserForm`,
+- **2026-09-02 (visual regression + SUPERADMIN E2E)** — Cerrados los dos
+  pendientes P1 dejados por el cierre técnico anterior (§16): (1)
+  `e2e/visual.spec.ts` + 3 proyectos Playwright dedicados, 20 baselines
+  reales sobre las 8 pantallas ya aprobadas por Claude Design (§14); (2)
+  `apps/api/src/scripts/seed-e2e-superadmin.ts` + `e2e/superadmin.spec.ts`
+  demuestran el happy path real de SUPERADMIN sin tocar la cuenta
+  bootstrap original (§7.2/§11.4). Efecto secundario real encontrado y
+  corregido en el camino: 18 logins redundantes de la suite visual
+  disparaban el `ThrottlerGuard` real bajo la paralelización de
+  Playwright — corregido con `auth.setup.ts`/`storageState` (una sola
+  sesión reutilizada), nunca tocando el límite. `typecheck`/`lint`/
+  `test:unit`/`build` verdes en `dashboard-web` y `api`; `e2e/*.spec.ts`
+  9/9 y `visual.spec.ts` 20/20 contra `apps/api` + PostgreSQL reales. Sin
+  cambios de diseño, contratos, arquitectura ni Better Auth.
+
+- **2026-09-02 (cierre P1 accesibilidad)** — Cerrado el pendiente P1
+  dejado por el cierre técnico anterior (§12): `PortalForm`, `UserForm`,
   `CommerceForm`, `PerfilTab` y `SeguridadTab` pasaron de
   `<button onClick>` a `<form onSubmit>` real, así que `Enter` en un
   campo de texto ahora envía el formulario para un usuario de teclado.

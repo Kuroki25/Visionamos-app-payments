@@ -22,6 +22,7 @@ out/
 coverage/
 playwright-report/
 test-results/
+apps/dashboard-web/e2e/.auth/
 blob-report/
 
 # Logs

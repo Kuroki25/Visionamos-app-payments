@@ -28,6 +28,7 @@
     "migration:revert": "typeorm-ts-node-commonjs migration:revert -d src/config/data-source.ts",
     "seed:superadmin": "ts-node -r tsconfig-paths/register src/scripts/seed-superadmin.ts",
     "seed:demo": "ts-node -r tsconfig-paths/register src/scripts/seed-demo.ts",
+    "seed:e2e-superadmin": "ts-node -r tsconfig-paths/register src/scripts/seed-e2e-superadmin.ts",
     "migrate:better-auth-users": "ts-node -r tsconfig-paths/register src/scripts/migrate-users-to-better-auth.ts",
     "test:auth-cutover-rehearsal": "node --env-file=.env node_modules/jest/bin/jest.js --config ./test/better-auth/jest-better-auth.json",
     "perf:auth-cutover-rehearsal": "node --env-file=.env -r ts-node/register -r tsconfig-paths/register test/better-auth/performance-baseline.ts"
