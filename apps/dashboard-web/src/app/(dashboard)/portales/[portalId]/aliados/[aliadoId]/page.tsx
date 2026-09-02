@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import type { Category, Commerce, Portal, Transaction } from '@repo/contracts';
 
 import { Header } from '../../../../../../components/layout/Header';
+import { ForbiddenNotice } from '../../../../../../components/ui/ForbiddenNotice';
 import { aliadoDetailPage } from '../../../../../../content/es/aliadoDetail';
 import { portalesPage } from '../../../../../../content/es/portales';
 import { AliadoHeaderCard } from '../../../../../../features/aliado-detail/components/AliadoHeaderCard';
@@ -44,6 +45,12 @@ export default async function AliadoDetailPage({
   } catch (error) {
     if (error instanceof ApiError && error.isNotFound) {
       notFound();
+    }
+    // Same real gap found (and fixed) on Portal detail via cross-tenant
+    // E2E testing: an actor outside this commerce's scope gets a real 403
+    // here, which must render a handled state, not crash.
+    if (error instanceof ApiError && error.isForbidden) {
+      return <ForbiddenNotice />;
     }
     throw error;
   }

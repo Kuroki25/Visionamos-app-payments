@@ -1,15 +1,16 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import type { Role } from '@repo/contracts';
 
 import { nav } from '../../content/es/nav';
 import { roleLabels } from '../../content/es/roles';
+import { signOut } from '../../lib/auth/client';
 import { getInitials } from '../../lib/format';
-import { BellIcon, MenuIcon, MoonIcon } from '../ui/icons';
+import { BellIcon, LogOutIcon, MenuIcon, MoonIcon } from '../ui/icons';
 import { navItems } from './nav-config';
 import { useDarkMode } from './use-dark-mode';
 
@@ -20,9 +21,23 @@ export interface SidebarUser {
 
 export function Sidebar({ user }: { user: SidebarUser }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { dark, toggle: toggleDark } = useDarkMode();
   const [collapsed, setCollapsed] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  async function handleLogOut() {
+    setLoggingOut(true);
+    // Real Better Auth sign-out (docs/frontend/DASHBOARD_FRONTEND_SOURCE_OF_TRUTH.md,
+    // "Autenticación") — this clears the real session cookie server-side,
+    // not a client-only redirect. The dashboard layout re-checks the
+    // session on the next request regardless (§7), so this redirect is
+    // just the optimistic UX path.
+    await signOut();
+    router.push('/login');
+    router.refresh();
+  }
   // No notifications backend exists yet — see the handoff analysis, "Datos
   // estáticos → datos reales". Kept as a variable (not inlined) so wiring a
   // real source later is a one-line change.
@@ -148,10 +163,22 @@ export function Sidebar({ user }: { user: SidebarUser }) {
             {getInitials(user.fullName)}
           </div>
           {!collapsed ? (
-            <div className="leading-tight">
-              <div className="text-[13px] font-semibold text-(--color-fg)">{user.fullName}</div>
+            <div className="min-w-0 flex-1 leading-tight">
+              <div className="truncate text-[13px] font-semibold text-(--color-fg)">{user.fullName}</div>
               <div className="text-[11.5px] text-(--color-fg-faint)">{roleLabels[user.role]}</div>
             </div>
+          ) : null}
+          {!collapsed ? (
+            <button
+              type="button"
+              onClick={() => void handleLogOut()}
+              disabled={loggingOut}
+              title={nav.logOut}
+              aria-label={nav.logOut}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-control-sm text-(--color-fg-faint) transition-colors hover:bg-(--color-surface-subtle) hover:text-(--color-danger) disabled:opacity-50"
+            >
+              <LogOutIcon />
+            </button>
           ) : null}
         </div>
       </div>

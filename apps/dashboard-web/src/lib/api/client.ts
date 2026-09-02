@@ -18,11 +18,66 @@ export interface ApiRequestOptions {
   headers?: Record<string, string>;
 }
 
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+const CSRF_COOKIE_NAME = 'csrf_token';
+const CSRF_HEADER_NAME = 'X-CSRF-Token';
+
+/**
+ * Reads one cookie by name from `document.cookie`. Only ever used for
+ * `csrf_token`, which the backend deliberately sets NOT `httpOnly`
+ * (`apps/api/src/modules/auth/middleware/csrf-cookie.middleware.ts`) so
+ * same-origin JavaScript can read it back — that's the whole point of the
+ * double-submit pattern (see `CsrfGuard` there): a cross-site request can
+ * carry the session cookie automatically but can never read this one to
+ * echo it back as a header.
+ */
+function readCookie(name: string): string | undefined {
+  const prefix = `${name}=`;
+  for (const part of document.cookie.split('; ')) {
+    if (part.startsWith(prefix)) {
+      return decodeURIComponent(part.slice(prefix.length));
+    }
+  }
+  return undefined;
+}
+
+/**
+ * The backend issues `csrf_token` from `CsrfCookieMiddleware`, which only
+ * runs for Nest-routed requests (`/api/v1/*`) — verified against the real
+ * server: `GET /api/v1/health` sets it, `GET /api/auth/get-session` does
+ * not (Better Auth's handler is mounted outside Nest's middleware chain,
+ * `mount-better-auth-handler.ts`). Every read in this app goes through
+ * `lib/api/server.ts` (server-side — its cookies never reach the browser),
+ * so without this, the browser would never hold the token until *after* a
+ * mutation's own request had already been rejected once. One cheap public
+ * GET primes it before the real request, so the very first mutation of a
+ * session works on the first try, not the second.
+ */
+async function ensureCsrfCookie(): Promise<void> {
+  if (readCookie(CSRF_COOKIE_NAME) !== undefined) return;
+  try {
+    await fetch(`${API_BASE_URL}/health`, { credentials: 'include' });
+  } catch {
+    // Best-effort — if this fails, the real request below still runs and
+    // fails with its own, already-handled ApiError instead.
+  }
+}
+
 async function request<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
+  const method = options.method ?? 'GET';
+  // The backend's CsrfGuard rejects every non-safe request with no matching
+  // X-CSRF-Token header/cookie pair — GET/HEAD/OPTIONS are exempt there
+  // too, so this mirrors that exemption exactly rather than sending the
+  // header unconditionally.
+  if (!SAFE_METHODS.has(method)) {
+    await ensureCsrfCookie();
+  }
+  const csrfToken = SAFE_METHODS.has(method) ? undefined : readCookie(CSRF_COOKIE_NAME);
+
   let response: Response;
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
-      method: options.method ?? 'GET',
+      method,
       // Better Auth's session cookie is scoped to the API's own origin
       // (cross-origin from this app's port) — without `credentials:
       // 'include'`, every authenticated request would silently look
@@ -30,6 +85,7 @@ async function request<T>(path: string, options: ApiRequestOptions = {}): Promis
       credentials: 'include',
       headers: {
         ...(options.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+        ...(csrfToken !== undefined ? { [CSRF_HEADER_NAME]: csrfToken } : {}),
         ...options.headers,
       },
       // `exactOptionalPropertyTypes` rejects `body: undefined` explicitly —

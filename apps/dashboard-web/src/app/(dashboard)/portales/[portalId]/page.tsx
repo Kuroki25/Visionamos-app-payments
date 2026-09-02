@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import type { Category, Commerce, Portal, Transaction } from '@repo/contracts';
 
 import { Header } from '../../../../components/layout/Header';
+import { ForbiddenNotice } from '../../../../components/ui/ForbiddenNotice';
 import { PortalDetailView } from '../../../../features/portal-detail/components/PortalDetailView';
 import { ApiError } from '../../../../lib/api/errors';
 import { serverApiClient } from '../../../../lib/api/server';
@@ -30,6 +31,13 @@ export default async function PortalDetailPage({ params }: { params: Promise<{ p
   } catch (error) {
     if (error instanceof ApiError && error.isNotFound) {
       notFound();
+    }
+    // A real, demonstrated gap (cross-tenant E2E test): an actor whose
+    // scope doesn't cover this portal (e.g. an ADMIN_PORTAL of a
+    // *different* portal) gets a real 403 here — that must render a
+    // handled state, never propagate to Next's generic error boundary.
+    if (error instanceof ApiError && error.isForbidden) {
+      return <ForbiddenNotice />;
     }
     throw error;
   }

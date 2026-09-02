@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 
 import type { Category } from '@repo/contracts';
 
@@ -52,6 +52,7 @@ export function CommerceForm({
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const copy = portalDetailPage.createModal;
+  const uid = useId();
 
   function set<K extends keyof typeof EMPTY>(key: K, value: string) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -94,29 +95,52 @@ export function CommerceForm({
       <div className="flex max-h-[58vh] flex-col gap-3.5 overflow-y-auto pr-0.5">
         <div className="text-[12.5px] font-bold tracking-[.03em] text-(--color-fg-faint)">{copy.generalSection}</div>
         <div>
-          <label className={labelClass}>
+          <label className={labelClass} htmlFor={`${uid}-tradeName`}>
             {copy.tradeNameLabel} <span className="text-(--color-danger)">*</span>
           </label>
-          <input value={form.tradeName} onChange={(e) => set('tradeName', e.target.value)} placeholder={copy.tradeNamePlaceholder} className={inputClass} />
+          <input
+            id={`${uid}-tradeName`}
+            value={form.tradeName}
+            onChange={(e) => set('tradeName', e.target.value)}
+            placeholder={copy.tradeNamePlaceholder}
+            className={inputClass}
+          />
         </div>
         <div>
-          <label className={labelClass}>
+          <label className={labelClass} htmlFor={`${uid}-legalName`}>
             {copy.legalNameLabel} <span className="text-(--color-danger)">*</span>
           </label>
-          <input value={form.legalName} onChange={(e) => set('legalName', e.target.value)} placeholder={copy.legalNamePlaceholder} className={inputClass} />
+          <input
+            id={`${uid}-legalName`}
+            value={form.legalName}
+            onChange={(e) => set('legalName', e.target.value)}
+            placeholder={copy.legalNamePlaceholder}
+            className={inputClass}
+          />
         </div>
         <div>
-          <label className={labelClass}>
+          <label className={labelClass} htmlFor={`${uid}-taxId`}>
             {copy.taxIdLabel} <span className="text-(--color-danger)">*</span>
           </label>
-          <input value={form.taxId} onChange={(e) => set('taxId', e.target.value)} placeholder={copy.taxIdPlaceholder} className={inputClass} />
+          <input
+            id={`${uid}-taxId`}
+            value={form.taxId}
+            onChange={(e) => set('taxId', e.target.value)}
+            placeholder={copy.taxIdPlaceholder}
+            className={inputClass}
+          />
         </div>
         <div>
-          <label className={labelClass}>
+          <label className={labelClass} htmlFor={`${uid}-categoryId`}>
             {copy.categoryLabel} <span className="text-(--color-danger)">*</span>
           </label>
           <div className="relative">
-            <select value={form.categoryId} onChange={(e) => set('categoryId', e.target.value)} className={`${inputClass} appearance-none`}>
+            <select
+              id={`${uid}-categoryId`}
+              value={form.categoryId}
+              onChange={(e) => set('categoryId', e.target.value)}
+              className={`${inputClass} appearance-none`}
+            >
               <option value="">{copy.categoryPlaceholder}</option>
               {categories.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -133,34 +157,40 @@ export function CommerceForm({
           {copy.contactSection}
         </div>
         <div>
-          <label className={labelClass}>
+          <label className={labelClass} htmlFor={`${uid}-contactName`}>
             {copy.contactNameLabel} <span className="text-(--color-danger)">*</span>
           </label>
-          <input value={form.contactName} onChange={(e) => set('contactName', e.target.value)} className={inputClass} />
+          <input id={`${uid}-contactName`} value={form.contactName} onChange={(e) => set('contactName', e.target.value)} className={inputClass} />
         </div>
         <div>
-          <label className={labelClass}>
+          <label className={labelClass} htmlFor={`${uid}-contactEmail`}>
             {copy.contactEmailLabel} <span className="text-(--color-danger)">*</span>
           </label>
-          <input type="email" value={form.contactEmail} onChange={(e) => set('contactEmail', e.target.value)} className={inputClass} />
+          <input
+            id={`${uid}-contactEmail`}
+            type="email"
+            value={form.contactEmail}
+            onChange={(e) => set('contactEmail', e.target.value)}
+            className={inputClass}
+          />
         </div>
         <div>
-          <label className={labelClass}>
+          <label className={labelClass} htmlFor={`${uid}-contactPhone`}>
             {copy.contactPhoneLabel} <span className="text-(--color-danger)">*</span>
           </label>
-          <input value={form.contactPhone} onChange={(e) => set('contactPhone', e.target.value)} className={inputClass} />
+          <input id={`${uid}-contactPhone`} value={form.contactPhone} onChange={(e) => set('contactPhone', e.target.value)} className={inputClass} />
         </div>
         <div>
-          <label className={labelClass}>
+          <label className={labelClass} htmlFor={`${uid}-city`}>
             {copy.cityLabel} <span className="text-(--color-danger)">*</span>
           </label>
-          <input value={form.city} onChange={(e) => set('city', e.target.value)} className={inputClass} />
+          <input id={`${uid}-city`} value={form.city} onChange={(e) => set('city', e.target.value)} className={inputClass} />
         </div>
         <div>
-          <label className={labelClass}>
+          <label className={labelClass} htmlFor={`${uid}-address`}>
             {copy.addressLabel} <span className="text-(--color-danger)">*</span>
           </label>
-          <input value={form.address} onChange={(e) => set('address', e.target.value)} className={inputClass} />
+          <input id={`${uid}-address`} value={form.address} onChange={(e) => set('address', e.target.value)} className={inputClass} />
         </div>
 
         {error ? <p className="text-[12.5px] text-(--color-danger)">{error}</p> : null}

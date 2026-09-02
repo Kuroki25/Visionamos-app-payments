@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { common } from '../../../content/es/common';
 import { configuracionPage } from '../../../content/es/configuracion';
 import { authClient } from '../../../lib/auth/client';
+import { translateAuthErrorMessage } from '../../../lib/auth/error-message';
 
 const inputClass =
   'w-full rounded-control border border-(--color-border) bg-(--color-bg) px-3.5 py-2.5 text-[13.5px] text-(--color-fg) outline-none transition-[border-color,box-shadow] focus:border-(--color-accent) focus:ring-[3px] focus:ring-(--color-accent-soft)';
@@ -46,7 +47,7 @@ export function SeguridadTab() {
     setError('');
     const { error: authError } = await authClient.changePassword({ currentPassword: current, newPassword: next1 });
     if (authError) {
-      setError(authError.message ?? common.genericError);
+      setError(translateAuthErrorMessage(authError.message) ?? common.genericError);
       setStatus('error');
       return;
     }

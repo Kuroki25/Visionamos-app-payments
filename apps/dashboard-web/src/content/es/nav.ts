@@ -23,4 +23,8 @@ export const nav = {
   notificationsEmpty: 'No tienes notificaciones nuevas.',
   markAllRead: 'Marcar todas leídas',
   searchPlaceholder: 'Buscar o escribir un comando...',
+  // The design never depicted a sign-out affordance (no login/logout was
+  // in its original scope) — added once real login made a real way to
+  // leave the session necessary too.
+  logOut: 'Cerrar sesión',
 } as const;
