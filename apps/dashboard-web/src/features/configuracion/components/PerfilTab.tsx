@@ -1,5 +1,6 @@
 'use client';
 
+import type { FormEvent } from 'react';
 import { useState } from 'react';
 
 import { common } from '../../../content/es/common';
@@ -17,7 +18,8 @@ export function PerfilTab({ userId, initialFullName, email }: { userId: string; 
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [error, setError] = useState('');
 
-  async function handleSave() {
+  async function handleSave(event: FormEvent) {
+    event.preventDefault();
     if (!fullName.trim()) {
       setError(configuracionPage.perfil.requiredError);
       setStatus('error');
@@ -39,7 +41,7 @@ export function PerfilTab({ userId, initialFullName, email }: { userId: string; 
   return (
     <div className="max-w-[560px] rounded-card border border-(--color-border) bg-(--color-surface) p-6 shadow-card">
       <div className="mb-4 text-[16.5px] font-bold text-(--color-fg)">{copy.title}</div>
-      <div className="flex flex-col gap-4">
+      <form onSubmit={(e) => void handleSave(e)} className="flex flex-col gap-4">
         <div>
           <label className={labelClass} htmlFor="profile-name">
             {copy.fullNameLabel}
@@ -64,14 +66,13 @@ export function PerfilTab({ userId, initialFullName, email }: { userId: string; 
         {status === 'error' ? <p className="text-[12.5px] text-(--color-danger)">{error}</p> : null}
         {status === 'saved' ? <p className="text-[12.5px] text-(--color-success)">{copy.saved}</p> : null}
         <button
-          type="button"
-          onClick={() => void handleSave()}
+          type="submit"
           disabled={status === 'saving'}
           className="h-[42px] w-fit rounded-control bg-(--color-accent) px-5 text-[13.5px] font-bold text-white disabled:opacity-70"
         >
           {status === 'saving' ? common.saving : copy.save}
         </button>
-      </div>
+      </form>
     </div>
   );
 }

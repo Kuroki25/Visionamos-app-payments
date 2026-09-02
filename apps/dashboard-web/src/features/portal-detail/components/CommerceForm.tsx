@@ -1,5 +1,6 @@
 'use client';
 
+import type { FormEvent } from 'react';
 import { useId, useState } from 'react';
 
 import type { Category } from '@repo/contracts';
@@ -58,7 +59,8 @@ export function CommerceForm({
     setForm((f) => ({ ...f, [key]: value }));
   }
 
-  async function handleSave() {
+  async function handleSave(event: FormEvent) {
+    event.preventDefault();
     if (
       !form.tradeName.trim() ||
       !form.legalName.trim() ||
@@ -92,6 +94,7 @@ export function CommerceForm({
       <div className="mb-1 text-[17px] font-extrabold text-(--color-fg)">{copy.title}</div>
       <div className="mb-5 text-[13px] text-(--color-fg-faint)">{copy.subtitle}</div>
 
+      <form onSubmit={(e) => void handleSave(e)}>
       <div className="flex max-h-[58vh] flex-col gap-3.5 overflow-y-auto pr-0.5">
         <div className="text-[12.5px] font-bold tracking-[.03em] text-(--color-fg-faint)">{copy.generalSection}</div>
         <div>
@@ -205,14 +208,14 @@ export function CommerceForm({
           {common.cancel}
         </button>
         <button
-          type="button"
-          onClick={() => void handleSave()}
+          type="submit"
           disabled={saving || categories.length === 0}
           className="h-11 flex-1 rounded-control bg-(--color-accent) text-[13.5px] font-bold text-white disabled:opacity-70"
         >
           {saving ? common.saving : common.create}
         </button>
       </div>
+      </form>
     </Modal>
   );
 }

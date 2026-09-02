@@ -9,8 +9,10 @@ documento". No se crean documentos adicionales sin necesidad real.
 **Última validación real de extremo a extremo**: 2026-09-02, contra
 `apps/api` + PostgreSQL reales corriendo localmente (Docker,
 `docker-compose.yml`), datos de `pnpm --filter api seed:demo`, y la
-suite `apps/dashboard-web/e2e/*.spec.ts` (7/7 verde). Ver §9 para el
-detalle de qué se verificó realmente vs. qué quedó inferido.
+suite `apps/dashboard-web/e2e/*.spec.ts` (8/8 verde, incluyendo la
+regresión de accesibilidad de `e2e/accessibility.spec.ts` añadida en el
+cierre del P1 de §12). Ver §9 para el detalle de qué se verificó
+realmente vs. qué quedó inferido.
 
 ## 1. Propósito
 
@@ -321,10 +323,10 @@ nombres/datos que vienen del backend. Sin librería de i18n (deliberado).
 | Categoría | Dónde | Qué verifica |
 |---|---|---|
 | UNIT | `src/**/*.test.ts(x)` (40 tests) | Funciones puras de mapeo (`Transaction`→fila, `Commerce`→fila, formato, tono, `translateAuthErrorMessage`) y un componente presentacional |
-| **E2E REAL** | `e2e/*.spec.ts` (7 tests) | Login real, sesión real (cookie `httpOnly`), refresh, nav directa, back/forward, logout real, RBAC/scope real (4 escenarios contra el backend real) — ver §11.2 |
+| **E2E REAL** | `e2e/*.spec.ts` (8 tests) | Login real, sesión real (cookie `httpOnly`), refresh, nav directa, back/forward, logout real, RBAC/scope real (4 escenarios contra el backend real), regresión de teclado/accesibilidad (1 escenario) — ver §11.2 |
 | MOCKED/VISUAL | Harness temporal `app/qa-preview/**` usado durante desarrollo para capturas | **Se borra siempre antes de terminar cada pantalla** — nunca convive con código real ni con REAL E2E. No queda ningún rastro en el repo hoy (verificar con `git status`/`find` si se sospecha lo contrario) |
 | INTEGRATION | No existe hoy en este app (sí en `apps/api`) | — |
-| ACCESSIBILITY | Verificación manual con Playwright (teclado, `getByRole`) durante esta fase — no es una suite permanente | Ver §12 |
+| ACCESSIBILITY | `e2e/accessibility.spec.ts` (1 test, permanente) + verificación manual con Playwright (teclado, `getByRole`) durante esta fase para lo no cubierto por esa suite | Ver §12 |
 | RESPONSIVE | Verificación manual con Playwright (3 viewports) durante esta fase — no es una suite permanente | Ver §13 |
 | VISUAL REGRESSION | No implementado como snapshots de Playwright — ver §14 (recomendación, no gap crítico) | — |
 
@@ -388,12 +390,18 @@ Verificado manualmente con Playwright (navegación 100% por teclado,
   reales; verificado que `Enter` inicia sesión correctamente.
 - **Corregido**: el título de `/login` era un `<div>`, no un heading
   semántico — ahora `<h1>`.
-- **Pendiente (P1, no bloqueante)**: el mismo patrón `<button onClick>`
-  sin `<form>` existe todavía en `PortalForm`, `UserForm`,
-  `CommerceForm` (modales) y `PerfilTab`/`SeguridadTab` — funcionan con
-  clic/mouse y con Tab+clic en el botón, pero no con Enter dentro de un
-  campo de texto. No se corrigió en esta fase por alcance (7+ archivos);
-  queda documentado para la siguiente pasada.
+- **Corregido (cerraba el P1 pendiente de la pasada anterior)**: el
+  mismo patrón `<button onClick>` sin `<form>` real en `PortalForm`,
+  `UserForm`, `CommerceForm` (modales) y `PerfilTab`/`SeguridadTab` —
+  funcionaban con clic/mouse y con Tab+clic en el botón, pero `Enter`
+  dentro de un campo de texto no hacía nada. Los cinco son ahora
+  `<form onSubmit>` reales (mismo mecanismo ya usado en
+  `LoginForm`/`ForgotPasswordForm`), con `event.preventDefault()` en el
+  handler. Regresión cubierta por `e2e/accessibility.spec.ts` (REAL E2E,
+  contra el backend real vía `PerfilTab`) — la misma corrección genérica
+  no se re-verifica cinco veces por separado, ver el comentario del
+  archivo. `pnpm --filter dashboard-web typecheck|lint|test:unit|build`
+  y la suite completa de `e2e/*.spec.ts` (8/8) verdes tras el cambio.
 - No se instaló ninguna librería de accesibilidad nueva.
 
 ## 13. Responsive — verificado, sin overflow horizontal
@@ -465,15 +473,25 @@ La aplicación NO se considera cerrada solo porque `lint`/`typecheck`/
 | CSRF | ✅ VERIFICADO Y CORREGIDO (bug real encontrado) |
 | RBAC/scopes (3 de 4 roles con login propio) | ✅ VERIFICADO; SUPERADMIN camino de éxito INFERIDO (§7.2) |
 | 401 vs 403 | ✅ VERIFICADO, nunca mezclados |
-| Playwright E2E real | ✅ 7/7 verde contra backend real |
+| Playwright E2E real | ✅ 8/8 verde contra backend real |
 | Cobertura unit | ✅ 40/40 verde |
 | Visual regression automatizada | ❌ NO IMPLEMENTADO (§14, recomendación) |
 | Responsive (3 viewports, sin overflow) | ✅ VERIFICADO manualmente |
-| Accesibilidad (teclado, labels, headings) | ✅ 3 bugs reales corregidos; 1 patrón (Enter en modales) documentado como P1 pendiente |
+| Accesibilidad (teclado, labels, headings) | ✅ 4 bugs reales corregidos (incluye el P1 de Enter en modales/tabs, ahora con regresión E2E) |
 | Regresión para bugs reales encontrados | ✅ timezone, traducción de errores de auth (unit); CSRF y 403 (E2E) |
 | Lint/typecheck/build (monorepo) | ✅ verde |
 
 ## 17. Historial de este documento
+
+- **2026-09-02 (cierre P1)** — Cerrado el único pendiente P1 dejado por
+  el cierre técnico anterior (§12): `PortalForm`, `UserForm`,
+  `CommerceForm`, `PerfilTab` y `SeguridadTab` pasaron de
+  `<button onClick>` a `<form onSubmit>` real, así que `Enter` en un
+  campo de texto ahora envía el formulario para un usuario de teclado.
+  Verificado con `typecheck`/`lint`/`test:unit`/`build` verdes y la
+  suite `e2e/*.spec.ts` completa (8/8, incluyendo la nueva
+  `e2e/accessibility.spec.ts`) contra `apps/api` + PostgreSQL reales.
+  Sin cambios de diseño, contratos, ni de arquitectura.
 
 - **2026-09-01** — `DASHBOARD_FRONTEND_SOURCE_OF_TRUTH.md` creado (Fase 0,
   arquitectura pre-handoff visual).

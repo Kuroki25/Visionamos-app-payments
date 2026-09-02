@@ -1,5 +1,6 @@
 'use client';
 
+import type { FormEvent } from 'react';
 import { useState } from 'react';
 
 import type { Commerce, Portal, Role, ScopeType } from '@repo/contracts';
@@ -75,7 +76,8 @@ export function UserForm({
     if (nextLocked) setScopeType(nextLocked);
   }
 
-  async function handleSave() {
+  async function handleSave(event: FormEvent) {
+    event.preventDefault();
     if (isEdit) {
       if (!fullName.trim()) {
         setError(usuariosPage.createModal.requiredError);
@@ -135,7 +137,7 @@ export function UserForm({
       <div className="mb-1 text-[17px] font-extrabold text-(--color-fg)">{copy.title}</div>
       <div className="mb-5 text-[13px] leading-relaxed text-(--color-fg-faint)">{copy.subtitle}</div>
 
-      <div className="flex flex-col gap-4">
+      <form onSubmit={(e) => void handleSave(e)} className="flex flex-col gap-4">
         <div>
           <label className={labelClass} htmlFor="user-fullname">
             {copy.fullNameLabel} <span className="text-(--color-danger)">*</span>
@@ -276,25 +278,24 @@ export function UserForm({
         ) : null}
 
         {error ? <p className="text-[12.5px] text-(--color-danger)">{error}</p> : null}
-      </div>
 
-      <div className="mt-6 flex gap-2.5">
-        <button
-          type="button"
-          onClick={onClose}
-          className="h-11 flex-1 rounded-control border border-(--color-border) text-[13.5px] font-semibold text-(--color-fg) transition-colors hover:bg-(--color-surface-subtle)"
-        >
-          {common.cancel}
-        </button>
-        <button
-          type="button"
-          onClick={() => void handleSave()}
-          disabled={saving}
-          className="h-11 flex-1 rounded-control bg-(--color-accent) text-[13.5px] font-bold text-white disabled:opacity-70"
-        >
-          {saving ? common.saving : isEdit ? common.save : common.create}
-        </button>
-      </div>
+        <div className="mt-2 flex gap-2.5">
+          <button
+            type="button"
+            onClick={onClose}
+            className="h-11 flex-1 rounded-control border border-(--color-border) text-[13.5px] font-semibold text-(--color-fg) transition-colors hover:bg-(--color-surface-subtle)"
+          >
+            {common.cancel}
+          </button>
+          <button
+            type="submit"
+            disabled={saving}
+            className="h-11 flex-1 rounded-control bg-(--color-accent) text-[13.5px] font-bold text-white disabled:opacity-70"
+          >
+            {saving ? common.saving : isEdit ? common.save : common.create}
+          </button>
+        </div>
+      </form>
     </Modal>
   );
 }
