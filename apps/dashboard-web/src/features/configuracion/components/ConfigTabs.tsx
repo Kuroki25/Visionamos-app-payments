@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 
+import { ComingSoonCard } from '../../../components/ui/ComingSoonCard';
 import { configuracionPage } from '../../../content/es/configuracion';
-import { ComingSoonTab } from './ComingSoonTab';
 import { PerfilTab } from './PerfilTab';
 import { RolesTab } from './RolesTab';
 import { SeguridadTab } from './SeguridadTab';
@@ -37,11 +37,11 @@ export function ConfigTabs({ userId, fullName, email }: { userId: string; fullNa
       {tab === 'perfil' ? <PerfilTab userId={userId} initialFullName={fullName} email={email} /> : null}
       {tab === 'seguridad' ? <SeguridadTab /> : null}
       {tab === 'roles' ? <RolesTab /> : null}
-      {tab === 'notificaciones' ? <ComingSoonTab message={configuracionPage.comingSoon.notificaciones} /> : null}
-      {tab === 'portales' ? <ComingSoonTab message={configuracionPage.comingSoon.portales} /> : null}
-      {tab === 'dashboard' ? <ComingSoonTab message={configuracionPage.comingSoon.dashboard} /> : null}
-      {tab === 'integraciones' ? <ComingSoonTab message={configuracionPage.comingSoon.integraciones} /> : null}
-      {tab === 'avanzado' ? <ComingSoonTab message={configuracionPage.comingSoon.avanzado} /> : null}
+      {tab === 'notificaciones' ? <ComingSoonCard message={configuracionPage.comingSoon.notificaciones} /> : null}
+      {tab === 'portales' ? <ComingSoonCard message={configuracionPage.comingSoon.portales} /> : null}
+      {tab === 'dashboard' ? <ComingSoonCard message={configuracionPage.comingSoon.dashboard} /> : null}
+      {tab === 'integraciones' ? <ComingSoonCard message={configuracionPage.comingSoon.integraciones} /> : null}
+      {tab === 'avanzado' ? <ComingSoonCard message={configuracionPage.comingSoon.avanzado} /> : null}
     </div>
   );
 }
