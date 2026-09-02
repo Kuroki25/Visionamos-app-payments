@@ -39,6 +39,7 @@
   --color-accent: #2f6ef2;
   --color-accent-soft: #eaf1ff;
   --color-orange: #f97316;
+  --color-orange-soft: #fff1e4;
   --color-success: #17a970;
   --color-success-soft: #e9f9f1;
   --color-danger: #e0433f;
@@ -71,6 +72,7 @@
   --color-accent: #5b9bff;
   --color-accent-soft: rgba(91, 155, 255, 0.14);
   --color-orange: #f6934b;
+  --color-orange-soft: rgba(255, 170, 90, 0.14);
   --color-success: #3ddc8c;
   --color-success-soft: rgba(61, 220, 140, 0.12);
   --color-danger: #ff6b6b;

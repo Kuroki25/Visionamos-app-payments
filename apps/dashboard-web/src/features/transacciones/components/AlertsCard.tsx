@@ -1,9 +1,7 @@
 import { BellIcon } from '../../../components/ui/icons';
 import { transaccionesPage } from '../../../content/es/transacciones';
 import type { TxAlert } from '../../../lib/transactions';
-
-const BORDER_VAR = { success: '--color-success', danger: '--color-danger', accent: '--color-accent', neutral: '--color-fg-faint' } as const;
-const BG_VAR = { success: '--color-success-soft', danger: '--color-danger-soft', accent: '--color-accent-soft', neutral: '--color-surface-subtle' } as const;
+import { toneBorderClasses, toneSoftBgClasses, toneSolidBgClasses, toneTextClasses } from '../../../lib/tone';
 
 /**
  * "Alertas de transacciones" — derived from the same real, most-recent
@@ -31,12 +29,10 @@ export function AlertsCard({ alerts }: { alerts: TxAlert[] }) {
         {alerts.map((alert) => (
           <div
             key={alert.id}
-            className="flex gap-3 rounded-[10px] p-3.5"
-            style={{ background: `var(${BG_VAR[alert.tone]})`, borderLeft: `3px solid var(${BORDER_VAR[alert.tone]})` }}
+            className={`flex gap-3 rounded-[10px] border-l-[3px] p-3.5 ${toneSoftBgClasses[alert.tone]} ${toneBorderClasses[alert.tone]}`}
           >
             <div
-              className="mt-px flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-extrabold text-white"
-              style={{ background: `var(${BORDER_VAR[alert.tone]})` }}
+              className={`mt-px flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-extrabold text-white ${toneSolidBgClasses[alert.tone]}`}
             >
               {alert.mark}
             </div>
@@ -44,8 +40,7 @@ export function AlertsCard({ alerts }: { alerts: TxAlert[] }) {
               <div className="mb-0.5 flex flex-wrap items-center gap-2 text-[13.5px] font-bold text-(--color-fg)">
                 {alert.title}
                 <span
-                  className="rounded-full bg-(--color-surface) px-1.5 py-px text-[10.5px] font-bold"
-                  style={{ color: `var(${BORDER_VAR[alert.tone]})` }}
+                  className={`rounded-full bg-(--color-surface) px-1.5 py-px text-[10.5px] font-bold ${toneTextClasses[alert.tone]}`}
                 >
                   {copy.newBadge}
                 </span>

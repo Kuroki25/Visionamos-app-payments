@@ -14,7 +14,7 @@ export function ConfirmDialog({
   if (!confirm) return null;
 
   return (
-    <div className="fixed inset-0 z-110 flex items-center justify-center bg-black/45 p-4" onClick={onClose} role="presentation">
+    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/45 p-4" onClick={onClose} role="presentation">
       <div
         className="w-full max-w-[380px] rounded-2xl bg-(--color-surface) p-6 shadow-modal"
         onClick={(event) => event.stopPropagation()}
