@@ -27,9 +27,19 @@ export function pluralize(count: number, singular: string, plural: string): stri
   return count === 1 ? singular : plural;
 }
 
-/** `DD/MM/YYYY` in `es-CO`, matching the mock's transaction row date format. */
+/**
+ * `DD/MM/YYYY` in `es-CO`, matching the mock's transaction row date format.
+ * Pinned to `America/Bogota` (Red Coopagos' own timezone, no DST) rather
+ * than the host's local timezone — without this, the same UTC instant
+ * renders as a different calendar day depending on where the server (or a
+ * viewer's browser) happens to be, which is wrong for a Colombian-only
+ * payments system.
+ */
 export function formatDateEs(iso: string): string {
-  return new Intl.DateTimeFormat('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(
-    new Date(iso),
-  );
+  return new Intl.DateTimeFormat('es-CO', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    timeZone: 'America/Bogota',
+  }).format(new Date(iso));
 }

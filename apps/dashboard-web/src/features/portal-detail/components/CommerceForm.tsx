@@ -1,0 +1,188 @@
+'use client';
+
+import { useState } from 'react';
+
+import type { Category } from '@repo/contracts';
+
+import { Modal } from '../../../components/ui/Modal';
+import { ChevronDownIcon } from '../../../components/ui/icons';
+import { common } from '../../../content/es/common';
+import { portalDetailPage } from '../../../content/es/portalDetail';
+import { apiClient } from '../../../lib/api/client';
+import { ApiError } from '../../../lib/api/errors';
+
+const inputClass =
+  'w-full rounded-control border border-(--color-border) bg-(--color-bg) px-3.5 py-2.5 text-[13.5px] text-(--color-fg) outline-none transition-[border-color,box-shadow] focus:border-(--color-accent) focus:ring-[3px] focus:ring-(--color-accent-soft)';
+const labelClass = 'mb-1.5 block text-[13px] font-semibold text-(--color-fg)';
+
+const EMPTY = {
+  tradeName: '',
+  legalName: '',
+  taxId: '',
+  categoryId: '',
+  contactName: '',
+  contactEmail: '',
+  contactPhone: '',
+  address: '',
+  city: '',
+};
+
+/**
+ * Create a Commerce (Aliado) — real fields from `CreateCommerceSchema`
+ * (`@repo/contracts`): the mock's form (nombre/tipo/nit/email/telefono/
+ * ciudad/dirección) is missing `legalName` and `contactName`, which the
+ * real backend requires, and its "tipo" free-text options don't match
+ * `categoryId` (a real, portal-specific `Category` picked from
+ * `GET /portals/:portalId/categories`) — both adapted here.
+ */
+export function CommerceForm({
+  open,
+  portalId,
+  categories,
+  onClose,
+  onSaved,
+}: {
+  open: boolean;
+  portalId: string;
+  categories: Category[];
+  onClose: () => void;
+  onSaved: (message: string) => void;
+}) {
+  const [form, setForm] = useState(EMPTY);
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const copy = portalDetailPage.createModal;
+
+  function set<K extends keyof typeof EMPTY>(key: K, value: string) {
+    setForm((f) => ({ ...f, [key]: value }));
+  }
+
+  async function handleSave() {
+    if (
+      !form.tradeName.trim() ||
+      !form.legalName.trim() ||
+      !form.taxId.trim() ||
+      !form.categoryId ||
+      !form.contactName.trim() ||
+      !form.contactEmail.trim() ||
+      !form.contactPhone.trim() ||
+      !form.address.trim() ||
+      !form.city.trim()
+    ) {
+      setError(copy.requiredError);
+      return;
+    }
+
+    setError('');
+    setSaving(true);
+    try {
+      await apiClient.post(`/portals/${portalId}/commerces`, form);
+      setForm(EMPTY);
+      onSaved(portalDetailPage.toasts.created);
+    } catch (cause) {
+      setError(cause instanceof ApiError && cause.isClientError ? cause.message : common.genericError);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Modal open={open} onClose={onClose} width={460}>
+      <div className="mb-1 text-[17px] font-extrabold text-(--color-fg)">{copy.title}</div>
+      <div className="mb-5 text-[13px] text-(--color-fg-faint)">{copy.subtitle}</div>
+
+      <div className="flex max-h-[58vh] flex-col gap-3.5 overflow-y-auto pr-0.5">
+        <div className="text-[12.5px] font-bold tracking-[.03em] text-(--color-fg-faint)">{copy.generalSection}</div>
+        <div>
+          <label className={labelClass}>
+            {copy.tradeNameLabel} <span className="text-(--color-danger)">*</span>
+          </label>
+          <input value={form.tradeName} onChange={(e) => set('tradeName', e.target.value)} placeholder={copy.tradeNamePlaceholder} className={inputClass} />
+        </div>
+        <div>
+          <label className={labelClass}>
+            {copy.legalNameLabel} <span className="text-(--color-danger)">*</span>
+          </label>
+          <input value={form.legalName} onChange={(e) => set('legalName', e.target.value)} placeholder={copy.legalNamePlaceholder} className={inputClass} />
+        </div>
+        <div>
+          <label className={labelClass}>
+            {copy.taxIdLabel} <span className="text-(--color-danger)">*</span>
+          </label>
+          <input value={form.taxId} onChange={(e) => set('taxId', e.target.value)} placeholder={copy.taxIdPlaceholder} className={inputClass} />
+        </div>
+        <div>
+          <label className={labelClass}>
+            {copy.categoryLabel} <span className="text-(--color-danger)">*</span>
+          </label>
+          <div className="relative">
+            <select value={form.categoryId} onChange={(e) => set('categoryId', e.target.value)} className={`${inputClass} appearance-none`}>
+              <option value="">{copy.categoryPlaceholder}</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+            <ChevronDownIcon className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-(--color-fg-faint)" />
+          </div>
+          {categories.length === 0 ? <p className="mt-1.5 text-[11.5px] text-(--color-danger)">{copy.noCategoriesError}</p> : null}
+        </div>
+
+        <div className="border-t border-(--color-border) pt-3 text-[12.5px] font-bold tracking-[.03em] text-(--color-fg-faint)">
+          {copy.contactSection}
+        </div>
+        <div>
+          <label className={labelClass}>
+            {copy.contactNameLabel} <span className="text-(--color-danger)">*</span>
+          </label>
+          <input value={form.contactName} onChange={(e) => set('contactName', e.target.value)} className={inputClass} />
+        </div>
+        <div>
+          <label className={labelClass}>
+            {copy.contactEmailLabel} <span className="text-(--color-danger)">*</span>
+          </label>
+          <input type="email" value={form.contactEmail} onChange={(e) => set('contactEmail', e.target.value)} className={inputClass} />
+        </div>
+        <div>
+          <label className={labelClass}>
+            {copy.contactPhoneLabel} <span className="text-(--color-danger)">*</span>
+          </label>
+          <input value={form.contactPhone} onChange={(e) => set('contactPhone', e.target.value)} className={inputClass} />
+        </div>
+        <div>
+          <label className={labelClass}>
+            {copy.cityLabel} <span className="text-(--color-danger)">*</span>
+          </label>
+          <input value={form.city} onChange={(e) => set('city', e.target.value)} className={inputClass} />
+        </div>
+        <div>
+          <label className={labelClass}>
+            {copy.addressLabel} <span className="text-(--color-danger)">*</span>
+          </label>
+          <input value={form.address} onChange={(e) => set('address', e.target.value)} className={inputClass} />
+        </div>
+
+        {error ? <p className="text-[12.5px] text-(--color-danger)">{error}</p> : null}
+      </div>
+
+      <div className="mt-5.5 flex gap-2.5">
+        <button
+          type="button"
+          onClick={onClose}
+          className="h-11 flex-1 rounded-control border border-(--color-border) text-[13.5px] font-semibold text-(--color-fg) transition-colors hover:bg-(--color-surface-subtle)"
+        >
+          {common.cancel}
+        </button>
+        <button
+          type="button"
+          onClick={() => void handleSave()}
+          disabled={saving || categories.length === 0}
+          className="h-11 flex-1 rounded-control bg-(--color-accent) text-[13.5px] font-bold text-white disabled:opacity-70"
+        >
+          {saving ? common.saving : common.create}
+        </button>
+      </div>
+    </Modal>
+  );
+}
