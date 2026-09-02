@@ -1,4 +1,15 @@
-# Dashboard Web — Source of Truth
+# Dashboard Web — Source of Truth (SUPERSEDIDO)
+
+> **Este documento fue reemplazado el 2026-09-02 por
+> [`DASHBOARD_SOURCE_OF_TRUTH.md`](./DASHBOARD_SOURCE_OF_TRUTH.md)**,
+> que consolida arquitectura + API + seguridad + contrato visual +
+> testing en una única fuente de verdad (el handoff visual de Claude
+> Design y el cierre técnico de E2E real ya sucedieron desde que esto se
+> escribió). `CLAUDE.md` apunta al documento nuevo. Se conserva este
+> archivo solo como registro histórico de la Fase 0
+> (pre-handoff) — no lo uses como referencia vigente.
+
+---
 
 Autoridad técnica y arquitectónica permanente para `apps/dashboard-web`
 (panel administrativo de Red Coopagos). Creado en la Fase 0 de preparación

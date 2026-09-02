@@ -28,18 +28,31 @@ necessarily what's true now.
 
 Before modifying `apps/dashboard-web` auth client, API client,
 feature structure, layouts, shared components, design system, content/
-texts, types, or routing, ALWAYS read:
+texts, types, routing, or tests (unit/E2E), ALWAYS read:
 
-`docs/frontend/DASHBOARD_FRONTEND_SOURCE_OF_TRUTH.md`
+`docs/frontend/DASHBOARD_SOURCE_OF_TRUTH.md`
+
+This is the single, consolidated source of truth (architecture + API +
+security + visual contract + testing + Definition of Done) — it
+superseded `DASHBOARD_FRONTEND_SOURCE_OF_TRUTH.md` on 2026-09-02, after
+the Claude Design visual handoff and a real end-to-end technical
+closure pass (login/logout, CSRF, RBAC, Playwright E2E against the real
+backend) both landed. Do not create additional source-of-truth
+documents without a real, demonstrated need — this repo already
+consolidated once (see that document's §17 "Historial") specifically to
+avoid duplicated/drifting docs.
 
 Do not follow `docs/architecture/CURRENT_ARCHITECTURE.md`,
 `DEPENDENCY_RULES.md`, or `TARGET_ARCHITECTURE.md` — they are stale
 (pre-implementation, dated 2026-08-23) and contradict the real codebase
 (wrong app names, wrong ports, undecided tech choices already resolved
-differently). This is documented, not silently ignored — see that
-source of truth's "Contradicción documental conocida".
+differently). This is documented, not silently ignored — see the source
+of truth's §3 "Documentos obsoletos".
 
-No UI/visual design has been created yet — that arrives via a Claude
-Design handoff. Do not invent sidebars, cards, tables, navigation, or
-colors ahead of it; see that document's "Contrato de handoff con Claude
-Design" and "Prohibiciones vigentes".
+The dashboard's UI is already implemented from a real Claude Design
+handoff (`RedCoop Dashboard.dc.html`, `TxTable.dc.html`,
+`RedCoop Login.dc.html`) — Claude Design is the **visual** source of
+truth (colors, spacing, layout, components), this repo's own source of
+truth is the **technical** one; they don't compete. Do not redesign
+approved UI while fixing a functional/security bug — see that
+document's §9 "Visual Contract".
