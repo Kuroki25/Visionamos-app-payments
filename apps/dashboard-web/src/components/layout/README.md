@@ -1,8 +1,20 @@
 # `src/components/layout`
 
-Empty on purpose. Cross-cutting structural components (AppShell, Sidebar,
-Header) belong here once the `(dashboard)` route group is built against the
-real Claude Design handoff — not before. Building a sidebar/header now would
-be inventing UI ahead of that handoff, which
-`docs/frontend/DASHBOARD_FRONTEND_SOURCE_OF_TRUTH.md` explicitly forbids at
-this phase.
+Cross-cutting structural chrome, built against the real Claude Design
+handoff ("RedCoop Dashboard.dc.html") — see
+`docs/frontend/design-handoff/DASHBOARD_INICIO_HANDOFF_ANALYSIS.md`.
+
+- `AppShell.tsx` — sidebar + scrollable content area. Server Component.
+- `Sidebar.tsx` — nav, dark-mode toggle, notifications, user footer.
+  Client Component (collapse/dark/notif state, active-route highlighting).
+- `Header.tsx` — page title/subtitle + search box. Presentational, per-page
+  (each page renders its own `<Header/>`, not `AppShell` — see that file's
+  docblock for why).
+- `use-dark-mode.ts` — the manual light/dark toggle backing `Sidebar`'s
+  switch (persisted to `localStorage`, applies a `.dark` class on `<html>`).
+- `nav-config.ts` / `icons.tsx` — nav item definitions and the inline SVG
+  icons ported from the design (no icon-library dependency).
+
+Only truly cross-page structure belongs here. Anything specific to one
+screen's content (stat cards, tables, forms) belongs in that screen's own
+`features/*` slice instead.

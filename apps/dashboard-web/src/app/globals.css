@@ -5,3 +5,102 @@
    detection only scans this app's own directory by default, so classes used
    exclusively inside packages/ui would otherwise be purged. */
 @source "../../../../packages/ui/src";
+
+/*
+ * Dashboard visual tokens — sourced 1:1 from Claude Design's
+ * "RedCoop Dashboard.dc.html" `getTheme(dark)` (light/dark palettes) and
+ * `cardShadow`/`cardHoverStyle` getters. No invented values — see
+ * `docs/frontend/design-handoff/DASHBOARD_INICIO_HANDOFF_ANALYSIS.md`,
+ * "Design tokens".
+ *
+ * The design's dark mode is a manual sidebar switch, not the OS
+ * `prefers-color-scheme` — so `dark:` is redefined here as a `.dark`
+ * ancestor-class variant (toggled by `components/layout/use-dark-mode.ts`)
+ * instead of Tailwind's default media-query variant. This is scoped to this
+ * app's own CSS only; it also makes @repo/ui's existing `dark:` classes
+ * respond to the same manual toggle, which is intentional (one dark-mode
+ * trigger for the whole page, not two).
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  /* `--font-inter` is set by `next/font/google` on `<html>` (`app/layout.tsx`) — same family Claude Design loads via a Google Fonts `<link>`, self-hosted instead. */
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+
+  --color-bg: #f8f9fb;
+  --color-sidebar: #ffffff;
+  --color-surface: #ffffff;
+  --color-surface-subtle: #f4f6fa;
+  --color-border: #e7e9ef;
+  --color-grid-line: #eef0f4;
+  --color-fg: #111318;
+  --color-fg-soft: #4b5162;
+  --color-fg-faint: #8a90a1;
+  --color-accent: #2f6ef2;
+  --color-accent-soft: #eaf1ff;
+  --color-orange: #f97316;
+  --color-success: #17a970;
+  --color-success-soft: #e9f9f1;
+  --color-danger: #e0433f;
+  --color-danger-soft: #fdecec;
+
+  /* card=16px, stat/role chip=14px, buttons/inputs=10px, icon buttons=8px */
+  --radius-card: 1rem;
+  --radius-card-sm: 0.875rem;
+  --radius-control: 0.625rem;
+  --radius-control-sm: 0.5rem;
+
+  --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.05);
+  --shadow-card-hover: 0 6px 16px rgba(16, 24, 40, 0.08);
+  --shadow-dropdown: 0 12px 30px rgba(0, 0, 0, 0.18);
+  --shadow-panel: 0 16px 40px rgba(0, 0, 0, 0.18);
+  --shadow-modal: 0 24px 60px rgba(0, 0, 0, 0.28);
+  --shadow-toast: 0 12px 28px rgba(0, 0, 0, 0.16);
+}
+
+.dark {
+  --color-bg: #0e1015;
+  --color-sidebar: #12141a;
+  --color-surface: #171a21;
+  --color-surface-subtle: #1d212a;
+  --color-border: #262b35;
+  --color-grid-line: #232833;
+  --color-fg: #f1f2f4;
+  --color-fg-soft: #c7cad1;
+  --color-fg-faint: #8a8f9c;
+  --color-accent: #5b9bff;
+  --color-accent-soft: rgba(91, 155, 255, 0.14);
+  --color-orange: #f6934b;
+  --color-success: #3ddc8c;
+  --color-success-soft: rgba(61, 220, 140, 0.12);
+  --color-danger: #ff6b6b;
+  --color-danger-soft: rgba(255, 107, 107, 0.12);
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.24);
+  --shadow-card-hover: 0 6px 16px rgba(0, 0, 0, 0.32);
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-fg);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 8px;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

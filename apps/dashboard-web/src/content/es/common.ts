@@ -7,7 +7,6 @@
  */
 export const common = {
   appName: 'Dashboard Visionamos',
-  /** `<meta name="description">` — distinct from the on-page tagline below on purpose. */
+  /** `<meta name="description">`. */
   appDescription: 'Panel administrativo de Visionamos',
-  homeTagline: 'Panel administrativo del monorepo.',
 } as const;
