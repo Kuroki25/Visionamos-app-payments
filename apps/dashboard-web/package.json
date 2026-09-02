@@ -23,6 +23,8 @@
     "react-dom": "catalog:",
     "@repo/ui": "workspace:*",
     "@repo/contracts": "workspace:*",
+    "better-auth": "1.7.2",
+    "server-only": "0.0.1",
     "zod": "catalog:"
   },
   "devDependencies": {

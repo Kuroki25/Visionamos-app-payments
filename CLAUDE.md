@@ -23,3 +23,23 @@ Always inspect the current repository state before applying a
 historical migration step — this codebase moves fast across sessions;
 past phase documents describe what was true when written, not
 necessarily what's true now.
+
+## Dashboard Web Frontend — Mandatory Source of Truth
+
+Before modifying `apps/dashboard-web` auth client, API client,
+feature structure, layouts, shared components, design system, content/
+texts, types, or routing, ALWAYS read:
+
+`docs/frontend/DASHBOARD_FRONTEND_SOURCE_OF_TRUTH.md`
+
+Do not follow `docs/architecture/CURRENT_ARCHITECTURE.md`,
+`DEPENDENCY_RULES.md`, or `TARGET_ARCHITECTURE.md` — they are stale
+(pre-implementation, dated 2026-08-23) and contradict the real codebase
+(wrong app names, wrong ports, undecided tech choices already resolved
+differently). This is documented, not silently ignored — see that
+source of truth's "Contradicción documental conocida".
+
+No UI/visual design has been created yet — that arrives via a Claude
+Design handoff. Do not invent sidebars, cards, tables, navigation, or
+colors ahead of it; see that document's "Contrato de handoff con Claude
+Design" and "Prohibiciones vigentes".

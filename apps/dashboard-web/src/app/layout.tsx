@@ -1,11 +1,12 @@
 import type { Metadata } from 'next';
 
+import { common } from '../content/es/common';
 import '../env';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Dashboard Visionamos',
-  description: 'Panel administrativo de Visionamos',
+  title: common.appName,
+  description: common.appDescription,
 };
 
 export default function RootLayout({ children }: LayoutProps<'/'>) {
