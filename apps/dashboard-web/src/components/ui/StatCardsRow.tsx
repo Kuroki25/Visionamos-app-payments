@@ -1,11 +1,10 @@
-import { getStaticStatCards } from '../api/get-overview-metrics';
+import type { StatCardDef } from '../../lib/metrics';
 import { StatCard } from './StatCard';
 
-export function StatCardsRow() {
-  const statCards = getStaticStatCards();
+export function StatCardsRow({ stats }: { stats: StatCardDef[] }) {
   return (
     <div className="mb-4 grid grid-cols-3 gap-4">
-      {statCards.map((stat) => (
+      {stats.map((stat) => (
         <StatCard key={stat.id} stat={stat} />
       ))}
     </div>

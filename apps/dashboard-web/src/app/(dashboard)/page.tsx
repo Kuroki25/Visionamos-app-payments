@@ -1,14 +1,15 @@
 import type { Transaction } from '@repo/contracts';
 
 import { Header } from '../../components/layout/Header';
+import { StatCardsRow } from '../../components/ui/StatCardsRow';
 import { dashboardHome } from '../../content/es/dashboardHome';
 import { ApiError } from '../../lib/api/errors';
 import { serverApiClient } from '../../lib/api/server';
 import { FlowChartCard } from '../../features/dashboard-overview/components/FlowChartCard';
 import { GoalCard } from '../../features/dashboard-overview/components/GoalCard';
 import { RecentTransactionsCard } from '../../features/dashboard-overview/components/RecentTransactionsCard';
-import { StatCardsRow } from '../../features/dashboard-overview/components/StatCardsRow';
-import { recentTxRows } from '../../features/transactions/api/map-transaction';
+import { getStaticStatCards } from '../../lib/metrics';
+import { recentTxRows } from '../../lib/transactions';
 
 const RECENT_TX_LIMIT = 5;
 
@@ -41,7 +42,7 @@ export default async function InicioPage() {
     <>
       <Header title={dashboardHome.title} subtitle={dashboardHome.subtitle} />
       <div className="px-9 pb-10 pt-1">
-        <StatCardsRow />
+        <StatCardsRow stats={getStaticStatCards()} />
 
         <div className="grid grid-cols-[1.6fr_1fr] gap-4">
           <FlowChartCard />

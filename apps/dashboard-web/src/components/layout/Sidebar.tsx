@@ -9,7 +9,7 @@ import type { Role } from '@repo/contracts';
 import { nav } from '../../content/es/nav';
 import { roleLabels } from '../../content/es/roles';
 import { getInitials } from '../../lib/format';
-import { BellIcon, MenuIcon, MoonIcon } from './icons';
+import { BellIcon, MenuIcon, MoonIcon } from '../ui/icons';
 import { navItems } from './nav-config';
 import { useDarkMode } from './use-dark-mode';
 

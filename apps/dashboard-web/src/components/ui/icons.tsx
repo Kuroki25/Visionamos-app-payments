@@ -5,7 +5,11 @@ import type { SVGProps } from 'react';
  * "RedCoop Dashboard.dc.html" — the design has no icon library, every icon
  * is a hand-authored inline SVG, so matching it exactly means keeping that
  * approach rather than swapping in a new icon-library dependency (see
- * "no agregues dependencias sin necesidad demostrada").
+ * "no agregues dependencias sin necesidad demostrada"). Lives in
+ * `components/ui` (not `components/layout`) because icons are used by both
+ * the persistent chrome (Sidebar/Header) and page content (a feature's own
+ * `components` folder), and features may not import `components/layout` —
+ * see that folder's README.
  *
  * All icons default to `currentColor` and take normal SVG props so callers
  * size/color them with Tailwind classes (`className="h-[18px] w-[18px]"` etc).
@@ -99,6 +103,41 @@ export function SearchIcon(props: IconProps) {
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" {...props}>
       <circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" strokeWidth="2" />
       <line x1="16" y1="16" x2="21" y2="21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function ChevronDownIcon(props: IconProps) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" {...props}>
+      <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function CloseIcon(props: IconProps) {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" {...props}>
+      <path d="M4 4l16 16M20 4L4 20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function DotsVerticalIcon(props: IconProps) {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" {...props}>
+      <circle cx="12" cy="5" r="1.6" fill="currentColor" />
+      <circle cx="12" cy="12" r="1.6" fill="currentColor" />
+      <circle cx="12" cy="19" r="1.6" fill="currentColor" />
+    </svg>
+  );
+}
+
+export function PlusIcon(props: IconProps) {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" {...props}>
+      <line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+      <line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
     </svg>
   );
 }

@@ -1,7 +1,7 @@
 import type { Transaction } from '@repo/contracts';
 import { describe, expect, it } from 'vitest';
 
-import { recentTxRows, toTxRow } from './map-transaction';
+import { recentTxAlerts, recentTxRows, sortByRecent, toTxAlert, toTxRow } from './transactions';
 
 function tx(overrides: Partial<Transaction>): Transaction {
   return {
@@ -45,6 +45,50 @@ describe('toTxRow', () => {
     expect(toTxRow(tx({ status: 'FAILED' })).estadoTone).toBe('danger');
     expect(toTxRow(tx({ status: 'PENDING' })).estadoTone).toBe('accent');
     expect(toTxRow(tx({ status: 'CANCELLED' })).estadoLabel).toBe('Cancelada');
+  });
+});
+
+describe('sortByRecent', () => {
+  it('sorts newest first without mutating the input array', () => {
+    const input = [
+      tx({ id: 'aaaaaa11-0000-0000-0000-000000000000', createdAt: '2026-01-10T00:00:00.000Z' }),
+      tx({ id: 'bbbbbb22-0000-0000-0000-000000000000', createdAt: '2026-01-20T00:00:00.000Z' }),
+    ];
+    const sorted = sortByRecent(input);
+
+    expect(sorted.map((t) => t.id)).toEqual(['bbbbbb22-0000-0000-0000-000000000000', 'aaaaaa11-0000-0000-0000-000000000000']);
+    expect(input[0]?.id).toBe('aaaaaa11-0000-0000-0000-000000000000');
+  });
+});
+
+describe('toTxAlert', () => {
+  it('derives an alert from a real transaction without inventing a rejection reason', () => {
+    const alert = toTxAlert(tx({ status: 'REJECTED', amount: 2000 }));
+
+    expect(alert.title).toBe('Rechazada');
+    expect(alert.tone).toBe('danger');
+    expect(alert.mark).toBe('✕');
+    expect(alert.desc).toBe('Transacción #111111 por $2.000 — 20/01/2026.');
+  });
+
+  it('uses a distinct mark per tone', () => {
+    expect(toTxAlert(tx({ status: 'APPROVED' })).mark).toBe('✓');
+    expect(toTxAlert(tx({ status: 'PENDING' })).mark).toBe('•');
+  });
+});
+
+describe('recentTxAlerts', () => {
+  it('sorts by createdAt descending and slices to the limit', () => {
+    const alerts = recentTxAlerts(
+      [
+        tx({ id: 'aaaaaa11-0000-0000-0000-000000000000', createdAt: '2026-01-10T00:00:00.000Z' }),
+        tx({ id: 'bbbbbb22-0000-0000-0000-000000000000', createdAt: '2026-01-20T00:00:00.000Z' }),
+      ],
+      1,
+    );
+
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0]?.id).toBe('#BBBBBB');
   });
 });
 

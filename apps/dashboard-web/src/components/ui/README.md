@@ -1,11 +1,22 @@
 # `src/components/ui`
 
-Empty on purpose. Reusable visual primitives (Button, Input, Badge, Dialog,
-...) already exist in `@repo/ui` and are imported from there directly
-(`import { Button } from '@repo/ui'`) — this folder is not a duplicate of
-that package.
+Reusable visual primitives that are genuinely app-specific and not (yet)
+promoted to `@repo/ui` — that package still ships Tailwind-hardcoded
+colors, not this app's design tokens (`@theme` in `app/globals.css`), so a
+few RedCoop-specific tiles live here instead of being duplicated per
+feature. `@repo/ui`'s own primitives (`Button`, `Input`, `Badge`, `Card`,
+`Alert`) are still imported straight from there — this folder is not a
+duplicate of that package.
 
-Only add something here when it is genuinely app-specific and not (yet)
-promoted to `@repo/ui`. Do not invent new primitives ahead of the Claude
-Design handoff — see `docs/frontend/DASHBOARD_FRONTEND_SOURCE_OF_TRUTH.md`,
-"Contrato de handoff con Claude Design".
+- `StatCard` / `StatCardsRow` / `stat-icons.tsx` — the 3 metric tiles
+  reused as-is on Inicio and Transacciones (`lib/metrics.ts` holds their
+  static data).
+- `TxTable` — the transaction table reused by Inicio, Transacciones, and
+  (later) Aliado detail (`lib/transactions.ts` holds the `Transaction` →
+  row mapping).
+
+Something belongs here (not in a `features/*/components`) once ≥2 pages
+need the exact same presentational component — `features/*` may not
+import each other
+(`docs/frontend/DASHBOARD_FRONTEND_SOURCE_OF_TRUTH.md`, "Reglas de
+dependencias"), so this is where cross-page UI actually lives.

@@ -1,8 +1,8 @@
 import Link from 'next/link';
 
 import { dashboardHome } from '../../../content/es/dashboardHome';
-import { TxTable } from '../../transactions/components/TxTable';
-import type { TxRow } from '../../transactions/types';
+import type { TxRow } from '../../../lib/transactions';
+import { TxTable } from '../../../components/ui/TxTable';
 
 // Matches `components/layout/nav-config.ts`'s "transacciones" entry — not
 // imported from there directly, since `components/layout` isn't one of

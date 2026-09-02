@@ -1,13 +1,13 @@
-import { txTable } from '../../../content/es/transactions';
-import { toneBadgeClasses } from '../../../lib/tone';
-import type { TxRow } from '../types';
+import { txTable } from '../../content/es/transactions';
+import type { TxRow } from '../../lib/transactions';
+import { toneBadgeClasses } from '../../lib/tone';
 
 const GRID_COLS = '100px 110px 90px 100px 110px 110px';
 
 /**
- * Ports Claude Design's `TxTable.dc.html` sub-component — reused by Inicio
- * today and by the Transacciones/Aliado-detail pages once they're built
- * (the design imports this same component from all three).
+ * Ports Claude Design's `TxTable.dc.html` sub-component — reused by Inicio,
+ * Transacciones, and (later) Aliado detail, matching how the design itself
+ * imports this same sub-component from all three.
  */
 export function TxTable({ rows }: { rows: TxRow[] }) {
   if (rows.length === 0) {

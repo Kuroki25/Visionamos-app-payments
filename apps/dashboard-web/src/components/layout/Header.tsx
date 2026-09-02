@@ -1,5 +1,5 @@
 import { nav } from '../../content/es/nav';
-import { SearchIcon } from './icons';
+import { SearchIcon } from '../ui/icons';
 
 export interface HeaderProps {
   title: string;

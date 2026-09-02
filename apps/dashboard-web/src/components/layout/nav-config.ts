@@ -1,7 +1,7 @@
 import type { ComponentType, SVGProps } from 'react';
 
 import { nav } from '../../content/es/nav';
-import { HomeIcon, PortalsIcon, SettingsIcon, TransactionsIcon, UsersIcon } from './icons';
+import { HomeIcon, PortalsIcon, SettingsIcon, TransactionsIcon, UsersIcon } from '../ui/icons';
 
 export interface NavItem {
   id: string;

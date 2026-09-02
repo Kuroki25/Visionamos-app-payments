@@ -12,8 +12,9 @@ handoff ("RedCoop Dashboard.dc.html") — see
   docblock for why).
 - `use-dark-mode.ts` — the manual light/dark toggle backing `Sidebar`'s
   switch (persisted to `localStorage`, applies a `.dark` class on `<html>`).
-- `nav-config.ts` / `icons.tsx` — nav item definitions and the inline SVG
-  icons ported from the design (no icon-library dependency).
+- `nav-config.ts` — nav item definitions (icons themselves live in
+  `components/ui/icons.tsx` — shared with page content, see that folder's
+  README for why).
 
 Only truly cross-page structure belongs here. Anything specific to one
 screen's content (stat cards, tables, forms) belongs in that screen's own
