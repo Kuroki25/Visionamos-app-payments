@@ -5,7 +5,7 @@ import { apiErrorFromResponse, NetworkError } from './errors';
  * Browser-originated HTTP client — for Client Component interaction and
  * mutations. Server Components/SSR must use `lib/api/server.ts` instead
  * (different cookie-forwarding story; see that file's docblock).
- * `docs/frontend/DASHBOARD_FRONTEND_SOURCE_OF_TRUTH.md`, "Integración con la API".
+ * `docs/frontend/DASHBOARD_SOURCE_OF_TRUTH.md`, §8 "Integración con la API".
  *
  * No feature may call `fetch(...)` directly against the API — this is the
  * one place base URL, credentials, JSON parsing, and error translation are

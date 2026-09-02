@@ -7,11 +7,11 @@ import type { Tone } from './tone';
 
 /**
  * View model for a `TxTable` row — decoupled from the `Transaction` API DTO
- * on purpose (`DASHBOARD_FRONTEND_SOURCE_OF_TRUTH.md`, "Tipos y contratos":
+ * on purpose (`DASHBOARD_SOURCE_OF_TRUTH.md`, §8.3 "Contratos":
  * "API DTO ≠ View Model"). Lives in `lib/`, not a feature: it's shared by
  * every page that renders a transaction row (Inicio, Transacciones, and
  * later Aliado detail) — `features/*` may not import each other
- * ("Reglas de dependencias"), so cross-page shared logic belongs here,
+ * (§5 "Reglas de dependencias"), so cross-page shared logic belongs here,
  * same as `lib/format.ts`/`lib/tone.ts`.
  */
 export interface TxRow {

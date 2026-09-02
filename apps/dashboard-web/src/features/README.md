@@ -18,7 +18,7 @@ A feature may import `lib/api`, `lib/auth`, `components/ui`, `content`, and
 cross-cutting `types`. Nothing outside a feature imports *into* it, and a
 feature does NOT import another feature or `components/layout` (that's
 cross-page chrome, see that folder's own README) —
-`docs/frontend/DASHBOARD_FRONTEND_SOURCE_OF_TRUTH.md`, "Reglas de
+`docs/frontend/DASHBOARD_SOURCE_OF_TRUTH.md`, §5 "Reglas de
 dependencias". Anything ≥2 pages need identically (a component, a
 `Transaction`→view-model mapping, static reference data) belongs in
 `components/ui` or `lib/` instead — see those folders' own READMEs

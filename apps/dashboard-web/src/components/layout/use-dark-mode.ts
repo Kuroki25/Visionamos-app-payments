@@ -7,7 +7,7 @@ import { useCallback, useEffect, useState } from 'react';
  * (Claude Design: `state.dark` + `toggleDark`). Persisted per-browser via
  * `localStorage` — this is a UI preference, not session data, so it's not
  * subject to the "session never in localStorage" rule
- * (`docs/frontend/DASHBOARD_FRONTEND_SOURCE_OF_TRUTH.md`, "Seguridad") —
+ * (`docs/frontend/DASHBOARD_SOURCE_OF_TRUTH.md`, §15 "Seguridad") —
  * that rule is about the Better Auth session cookie, not display settings.
  *
  * Applies/removes a `dark` class on `<html>`, which `globals.css`'s

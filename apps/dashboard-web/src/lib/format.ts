@@ -1,7 +1,7 @@
 /**
  * Small cross-cutting display-formatting helpers — shared by `components/
  * layout` and `features/*`, so this lives in `lib/`, not inside a feature
- * (`docs/frontend/DASHBOARD_FRONTEND_SOURCE_OF_TRUTH.md`, "Reglas de
+ * (`docs/frontend/DASHBOARD_SOURCE_OF_TRUTH.md`, §5 "Reglas de
  * dependencias": features may import `lib/*`, nothing feature-specific
  * belongs here).
  */

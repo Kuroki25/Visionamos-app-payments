@@ -13,4 +13,4 @@ types). This is deliberately empty right now.
   Values ≠ Component Props, even when a feature is small enough that they
   currently look identical.
 
-See `docs/frontend/DASHBOARD_FRONTEND_SOURCE_OF_TRUTH.md`, "Estrategia de tipos".
+See `docs/frontend/DASHBOARD_SOURCE_OF_TRUTH.md`, §8.3 "Contratos".

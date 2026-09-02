@@ -4,8 +4,8 @@ import { env } from '../../env';
  * Single place both `client.ts` (browser) and `server.ts` (Server
  * Components/Route Handlers) read the API base URL from — neither imports
  * `../../env` directly, so a future change to how the URL is resolved
- * touches only this file (docs/frontend/DASHBOARD_FRONTEND_SOURCE_OF_TRUTH.md,
- * "Variables de entorno").
+ * touches only this file (docs/frontend/DASHBOARD_SOURCE_OF_TRUTH.md,
+ * §8 "Integración con la API").
  */
 export const API_BASE_URL = env.NEXT_PUBLIC_API_URL;
 

@@ -1,7 +1,7 @@
 /**
  * Centralized, statically-typed application text — Spanish only for now,
  * deliberately no i18n library yet
- * (docs/frontend/DASHBOARD_FRONTEND_SOURCE_OF_TRUTH.md, "Textos y contenido").
+ * (docs/frontend/DASHBOARD_SOURCE_OF_TRUTH.md, §10 "Textos (`content/es/`)").
  * Only static UI copy belongs here: titles, labels, buttons, generic
  * messages. Never backend-obtained names, dynamic data, or entity content.
  */

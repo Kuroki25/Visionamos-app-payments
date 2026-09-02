@@ -6,7 +6,7 @@ import { TxTable } from '../../../components/ui/TxTable';
 
 // Matches `components/layout/nav-config.ts`'s "transacciones" entry — not
 // imported from there directly, since `components/layout` isn't one of
-// this feature's allowed imports (`DASHBOARD_FRONTEND_SOURCE_OF_TRUTH.md`,
+// this feature's allowed imports (`DASHBOARD_SOURCE_OF_TRUTH.md`, §5
 // "Reglas de dependencias": features may import `lib/*`, `components/ui`,
 // `content`, cross-cutting `types` — not `components/layout`).
 const TRANSACCIONES_HREF = '/transacciones';

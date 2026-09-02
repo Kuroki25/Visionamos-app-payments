@@ -29,7 +29,7 @@ import { serverApiClient } from '../api/server';
  * security boundary. Every mutating request still goes through
  * `BetterAuthSessionGuard`/`RolesGuard`/`ScopeAuthorizationService` on the
  * real backend regardless of what this function returns
- * (docs/frontend/DASHBOARD_FRONTEND_SOURCE_OF_TRUTH.md, "Autorización").
+ * (docs/frontend/DASHBOARD_SOURCE_OF_TRUTH.md, §7 "Autorización").
  */
 export async function getCurrentUser(): Promise<User | null> {
   try {

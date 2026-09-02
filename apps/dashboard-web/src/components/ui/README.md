@@ -18,5 +18,5 @@ duplicate of that package.
 Something belongs here (not in a `features/*/components`) once ≥2 pages
 need the exact same presentational component — `features/*` may not
 import each other
-(`docs/frontend/DASHBOARD_FRONTEND_SOURCE_OF_TRUTH.md`, "Reglas de
+(`docs/frontend/DASHBOARD_SOURCE_OF_TRUTH.md`, §5 "Reglas de
 dependencias"), so this is where cross-page UI actually lives.

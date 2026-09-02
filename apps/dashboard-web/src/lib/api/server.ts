@@ -9,7 +9,7 @@ import { apiErrorFromResponse, NetworkError } from './errors';
  * Server-originated HTTP client — for Server Components, layouts, and any
  * server→NestJS call that must run before the page streams to the browser.
  * Client Components/mutations must use `lib/api/client.ts` instead.
- * `docs/frontend/DASHBOARD_FRONTEND_SOURCE_OF_TRUTH.md`, "Integración con la API".
+ * `docs/frontend/DASHBOARD_SOURCE_OF_TRUTH.md`, §8 "Integración con la API".
  *
  * `import 'server-only'` makes bundling this into a Client Component a
  * build-time error, not a runtime surprise — it reads request cookies via

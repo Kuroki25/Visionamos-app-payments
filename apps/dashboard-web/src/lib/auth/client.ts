@@ -6,7 +6,7 @@ import { BETTER_AUTH_URL } from '../api/config';
 
 /**
  * The ONE Better Auth client configuration point in this app
- * (docs/frontend/DASHBOARD_FRONTEND_SOURCE_OF_TRUTH.md, "Autenticación").
+ * (docs/frontend/DASHBOARD_SOURCE_OF_TRUTH.md, §6 "Better Auth").
  * NestJS is the only Better Auth authority (`apps/api/src/infra/better-auth`)
  * — this is a client of that instance, not a second configuration. No
  * plugins are added here beyond what the server actually enables

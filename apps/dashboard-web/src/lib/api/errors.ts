@@ -9,8 +9,8 @@ import { ProblemDetailsSchema, type ProblemDetails } from '@repo/contracts';
  *
  * `ApiError` is the ONLY error type `lib/api/client.ts`/`server.ts` ever
  * throw for a non-2xx response — features must not parse `Response` bodies
- * themselves (docs/frontend/DASHBOARD_FRONTEND_SOURCE_OF_TRUTH.md, "Manejo
- * de errores").
+ * themselves (docs/frontend/DASHBOARD_SOURCE_OF_TRUTH.md, §8.2 "Status
+ * codes").
  */
 export class ApiError extends Error {
   readonly status: number;

@@ -8,7 +8,7 @@ import { getCurrentUser } from '../../lib/auth/session.server';
  * Route group for every screen behind the admin shell. This is the first
  * real protected route in the app — the `(dashboard)` group and this
  * auth check are exactly what
- * `docs/frontend/DASHBOARD_FRONTEND_SOURCE_OF_TRUTH.md` (§5, §8) said to
+ * `docs/frontend/DASHBOARD_SOURCE_OF_TRUTH.md` (§5, §8) said to
  * create once a real dashboard page existed, not before.
  *
  * The check itself — `getCurrentUser()` in a Server Component — IS the

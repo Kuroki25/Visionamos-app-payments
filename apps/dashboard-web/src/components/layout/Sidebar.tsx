@@ -29,8 +29,8 @@ export function Sidebar({ user }: { user: SidebarUser }) {
 
   async function handleLogOut() {
     setLoggingOut(true);
-    // Real Better Auth sign-out (docs/frontend/DASHBOARD_FRONTEND_SOURCE_OF_TRUTH.md,
-    // "Autenticación") — this clears the real session cookie server-side,
+    // Real Better Auth sign-out (docs/frontend/DASHBOARD_SOURCE_OF_TRUTH.md,
+    // §6 "Better Auth") — this clears the real session cookie server-side,
     // not a client-only redirect. The dashboard layout re-checks the
     // session on the next request regardless (§7), so this redirect is
     // just the optimistic UX path.
