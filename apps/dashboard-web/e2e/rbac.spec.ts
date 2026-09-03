@@ -62,9 +62,17 @@ test.describe('RBAC and scope — real backend enforcement', () => {
     await page.goto('/portales');
     await expect(page.getByRole('heading', { name: 'Gestión de Portales' })).toBeVisible();
 
-    const responsePromise = page.waitForResponse((r) => r.url().includes('/api/v1/portals') && r.request().method() === 'POST');
+    const responsePromise = page.waitForResponse(
+      (r) => /\/api\/v1\/portals$/.test(r.url()) && r.request().method() === 'POST',
+    );
     await page.getByRole('button', { name: 'Nuevo portal' }).click();
+    // All 4 required fields, so client-side validation actually lets the
+    // request reach the backend — the point of this test is that the
+    // *backend* rejects it, not that the form happens to be incomplete.
     await page.getByLabel(/Nombre del portal/).fill('Should Be Rejected By The Real Backend');
+    await page.getByLabel(/Nombre de visualización/).fill('Debería ser rechazado');
+    await page.getByLabel(/Tipo de servicio/).fill('Educación');
+    await page.getByLabel(/Descripción/).fill('Este intento debe ser rechazado por el backend real.');
     await page.getByRole('button', { name: 'Guardar' }).click();
 
     const response = await responsePromise;

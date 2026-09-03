@@ -6,6 +6,7 @@ import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/config/configure-app';
 import type { Env } from '../src/config/env.schema';
 import { TestSession } from './helpers/http';
+import { PORTAL_FIXTURE_FIELDS } from './helpers/portal-fixture';
 import { seedSuperadmin } from './helpers/seed-superadmin';
 
 /**
@@ -31,7 +32,7 @@ describe('forms (integration)', () => {
     superadmin = await TestSession.create(app.getHttpServer());
     await superadmin.login(seeded.email, seeded.password);
 
-    const portal = await superadmin.post('/api/v1/portals').send({ name: `Portal Forms ${Date.now()}` });
+    const portal = await superadmin.post('/api/v1/portals').send({ name: `Portal Forms ${Date.now()}`, ...PORTAL_FIXTURE_FIELDS });
     const category = await superadmin.post(`/api/v1/portals/${portal.body.id}/categories`).send({ name: 'Educación' });
     const commerce = await superadmin.post(`/api/v1/portals/${portal.body.id}/commerces`).send({
       categoryId: category.body.id,

@@ -6,16 +6,18 @@ Fuente de verdad **técnica y visual** única para `apps/dashboard-web`
 análisis de handoff de Claude Design — ver §18 "Historial de este
 documento". No se crean documentos adicionales sin necesidad real.
 
-**Última validación real de extremo a extremo**: 2026-09-02, contra
+**Última validación real de extremo a extremo**: 2026-09-03, contra
 `apps/api` + PostgreSQL reales corriendo localmente (Docker,
 `docker-compose.yml`), datos de `pnpm --filter api seed:demo` +
 `seed:e2e-superadmin`, y las suites `apps/dashboard-web/e2e/*.spec.ts`
-(18/18 verde) + `e2e/visual.spec.ts` (21/21 verde, 3 viewports); backend
-`apps/api` unit 46/46, `test:integration` 78/78,
-`test:auth-cutover-rehearsal` 12/12. **Cierre técnico del frontend:
-COMPLETED** — ver §16. Corrección funcional/visual de Usuarios/Portales/
-Aliados/Alertas (los 5 slices): COMPLETED — ver §17. Ver §9 para el
-detalle de qué se verificó realmente vs. qué quedó inferido.
+(21/21 verde) + `e2e/visual.spec.ts` (21/21 verde, 3 viewports); backend
+`apps/api` unit 46/46, `test:integration` 85/85,
+`test:auth-cutover-rehearsal` 12/12; `@repo/contracts` 58/58. **Cierre
+técnico del frontend: COMPLETED** — ver §16. Corrección funcional/visual
+de Usuarios/Portales/Aliados/Alertas (los 5 slices, incluyendo
+displayName/serviceType/description/logo reales de Portal): COMPLETED —
+ver §17. Ver §9 para el detalle de qué se verificó realmente vs. qué
+quedó inferido.
 
 ## 1. Propósito
 
@@ -673,21 +675,101 @@ formulario aquí documentado sin actualizar esta sección primero.
 / `06-portal-form-expected-bottom.png` (Claude Design, mismo form en dos
 posiciones de scroll).
 
-**Decisiones de negocio del usuario (bloqueadores reales resueltos, no
-inventados por la sesión)**:
+**Decisión de negocio revertida por el usuario (2026-09-03)**: la pasada
+anterior había clasificado `displayName`/`serviceType`/`description`/logo
+como `BACKEND_GAP` sin decisión de negocio confirmada y el usuario había
+elegido explícitamente no implementarlos. En esta pasada el usuario
+confirmó que sí son campos reales — la decisión se documenta aquí porque
+la reversión en sí es la evidencia de que no se inventó nada por cuenta
+propia; se implementó solo después de que el usuario, la autoridad real
+sobre el modelo de negocio (§3 "Jerarquía de autoridad" del prompt
+maestro), lo confirmara.
 
-- **Nombre de visualización / Tipo de servicio / Descripción**: la imagen
-  los pide, pero ni `DOMAIN_GLOSSARY` ni el contrato confirman esos campos
-  como negocio real (el propio docblock de `CreatePortalSchema` decía
-  *"field list undecided"*). El usuario eligió **no implementarlos** — el
-  form real queda más corto que la imagen, a propósito, en vez de
-  inventar negocio no confirmado.
-- **Logotipo del portal**: cero módulos de upload/storage en `apps/api`
-  (verificado). El usuario eligió **diferir con estado honesto** — el form
-  no incluye upload de logo, ni siquiera decorativo. Mismo patrón que §9.3
-  ("Funcionalidades sin soporte backend").
+**`displayName`/`serviceType`/`description` — reales, requeridos en
+creación (`MISSING` → implementado de punta a punta)**:
 
-**Único campo real agregado — "Portal activo" (`MAPPING_REQUIRED` cerrado)**:
+- `PortalEntity` gana 4 columnas nuevas, las 3 de texto **nullable** (los
+  3 portales sembrados antes de esta pasada — Avanza/Otrahuilca/Coopenjo —
+  no tienen ninguna; migración aditiva, sin backfill inventado) pero
+  **requeridas en `CreatePortalSchema`** para todo portal nuevo.
+- `serviceType` es **texto libre, no un enum cerrado** — la imagen lo
+  muestra como un `<select>` ("Selecciona un tipo"), pero no existe en
+  `docs/business/` ningún catálogo confirmado de categorías de portal
+  (distinto de `Category` de Comercio, que sí es real y ya existe).
+  Inventar una lista de opciones habría sido exactamente el "no inventar
+  negocio no confirmado" que esta misma pasada evita en otros puntos —
+  documentado en el docblock de la entidad, trivial de convertir a enum
+  cuando el negocio defina las opciones reales.
+- **`UpdatePortalSchema` los deja opcionales** (a diferencia de creación) —
+  necesario para que un admin pueda seguir renombrando un portal viejo sin
+  verse forzado a rellenar campos que nunca tuvo (`PortalForm.tsx` solo
+  envía el campo si el admin escribió algo; enviar `''` habría fallado el
+  `min(1)` del schema). Bug real encontrado durante el propio desarrollo:
+  la primera versión exigía los 4 campos también en edición, lo que
+  bloqueaba renombrar Avanza/Otrahuilca/Coopenjo — corregido antes de
+  cerrar el slice, con el propio E2E de `superadmin.spec.ts` (que renombra
+  Otrahuilca) como regresión real.
+- **Verificado real** (`apps/api/test/portals.e2e-spec.ts` +
+  `packages/contracts/src/portals.test.ts` + `e2e/create-portal.spec.ts`):
+  creación sin estos campos → 400 real; creación completa → persiste y se
+  lee de vuelta; edición pre-llena los valores reales del portal y
+  persiste un cambio parcial.
+
+**Logotipo del portal — storage local en disco (`BACKEND_GAP` → implementado)**:
+
+- **Decisión del usuario**: storage local en disco (no S3/CDN por ahora).
+  `multer` + `@types/multer` agregados como dependencias directas de
+  `apps/api` (antes solo transitivas vía `@nestjs/platform-express`,
+  mismo patrón que `express` durante el cutover de Better Auth).
+- `POST /portals/:id/logo` (multipart, `memoryStorage()` — el buffer se
+  valida y se escribe a disco en el propio servicio, no en el
+  interceptor) y `GET /portals/:id/logo` (sirve el archivo,
+  `res.sendFile`).
+- **Validación real, no solo el `Content-Type` del cliente**: además del
+  `fileFilter` de multer (MIME declarado, tamaño vía `limits.fileSize`),
+  `PortalsService.uploadLogo` lee los **magic bytes reales** del archivo
+  (`portal-logo-storage.ts`, `detectImageMimeType`) — un archivo que dice
+  ser PNG pero no lo es se rechaza igual (probado con un archivo de texto
+  disfrazado de `.png`). Nombre de archivo siempre generado server-side
+  (`randomUUID()` + extensión real detectada) — nunca el nombre que manda
+  el cliente (path traversal).
+- **`apps/api/uploads/` gitignored** — nunca en el repo. Un logo
+  reemplazado borra el archivo anterior (best-effort, no bloquea la
+  request si ya no existe).
+- **`GET /portals/:id/logo` es deliberadamente `@Public()`**: un logo no
+  es dato sensible (cualquier rol que pueda listar portales ya lo ve
+  inline), y un `<img src>` normal nunca manda la cookie de sesión
+  cross-origin (`:3101` dashboard vs `:4100` API) — protegerlo igual que
+  el resto de la API solo habría roto la imagen sin ganar seguridad real.
+  `logoUrl` en `Portal` es una ruta relativa al prefijo de la API
+  (`/portals/{id}/logo`, no `/api/v1/...`) — el frontend arma la URL
+  completa con `API_BASE_URL` (`lib/api/config.ts`), igual que cualquier
+  otra llamada.
+- `lib/api/client.ts` gana soporte real para `FormData` (antes solo
+  JSON.stringify incondicional) — sin eso, el upload real desde el
+  navegador nunca habría funcionado.
+- **Verificado real** (`apps/api/test/portals.e2e-spec.ts`, 5 tests +
+  `e2e/create-portal.spec.ts`): sube un PNG real de 1x1 (bytes reales, no
+  un archivo simulado) y `GET` devuelve exactamente los mismos bytes con
+  el `Content-Type` correcto; re-subir reemplaza el archivo servido (no
+  solo la fila); un archivo no-imagen disfrazado de PNG se rechaza; `GET`
+  sin logo nunca subido es 404 real, no una imagen rota; un
+  `ADMIN_PORTAL` no puede subir un logo a un portal fuera de su scope
+  (403 real, BOLA).
+- **Hallazgo real durante esta pasada, no relacionado con el código**: la
+  suite E2E completa (dashboard-web) había acumulado ~22 portales de
+  prueba en la base de desarrollo real a lo largo de la sesión (nombres
+  `E2E Portal ...`, `Portal A/B ...`, etc., de corridas repetidas). La
+  página `/portales` hace una consulta de comercios por portal (N+1) —
+  con ~26 portales esa sola carga de página se acercaba al límite real
+  del `ThrottlerGuard` (100 req/60s), produciendo 429 intermitentes que
+  parecían fallos de test. Limpiados los 22 portales de prueba (los 4
+  reales — Avanza/Otrahuilca/Coopenjo/coopcentral — verificados intactos
+  primero, cero dependientes en los de prueba antes de borrar). El propio
+  patrón N+1 es preexistente y queda fuera del alcance de esta pasada — no
+  se tocó, solo se documenta como hallazgo real.
+
+**"Portal activo" (`MAPPING_REQUIRED` cerrado en la pasada anterior)**:
 
 - `status` ya existía en la entidad (`default: 'ACTIVE'`) y en
   `PATCH /portals/:id/status`, pero no en la creación. `CreatePortalSchema`
@@ -831,8 +913,8 @@ cuando entran en conflicto:
 | Users: contraseña provisional | Admin la escribe a mano | "Se generarán credenciales automáticamente" | `CreateUserSchema.password` requerido (mín. 12) — sin endpoint de auto-generación | `BACKEND_GAP` | **Hecho** — generada server-side, devuelta una vez en `POST /users`, input quitado, ver §17.1 |
 | Users ↔ Better Auth atomicidad | Ya transaccional (`dataSource.transaction`) | — | — | `KEEP` | **Hecho** — test real que fuerza el fallo y verifica que nada se guarda, ver §17.1 |
 | Portal: Nombre del portal | Único campo | Campo 1 de 6 | `CreatePortalSchema = { name }` | `EXISTS` | Mantener |
-| Portal: Nombre de visualización / Tipo de servicio / Descripción | No existen | Campos 2, 3, 4 | Docblock del contrato: *"field list undecided"*; sin mención en `DOMAIN_GLOSSARY` | `BACKEND_GAP` sin decisión de negocio confirmada | **Decisión del usuario**: no implementar — el form se queda más corto que la imagen a propósito, sin inventar negocio |
-| Portal: Logotipo | No existe | Upload drag&drop | Cero módulos de imágenes/upload/storage en `apps/api` | `BACKEND_GAP` — infraestructura nueva | **Decisión del usuario**: diferir con estado honesto (mismo patrón que §9.3), sin construir storage ahora |
+| Portal: Nombre de visualización / Tipo de servicio / Descripción | No existían | Campos 2, 3, 4 | Docblock del contrato decía *"field list undecided"* | `BACKEND_GAP` | **Hecho** — el usuario confirmó los campos reales (revierte la decisión anterior); `serviceType` es texto libre, no el enum cerrado de la imagen (sin catálogo confirmado) — ver §17.2 |
+| Portal: Logotipo | No existía | Upload drag&drop | Cero módulos de imágenes/upload/storage en `apps/api` | `BACKEND_GAP` — infraestructura nueva | **Hecho** — storage local en disco (decisión del usuario), `multer`, magic-byte real, `GET`/`POST /portals/:id/logo` — ver §17.2 |
 | Portal: Portal activo | No existe en creación | Toggle | `status` ya existe en la entidad y en `PATCH /portals/:id/status`; falta en `CreatePortalSchema` | `MAPPING_REQUIRED` | **Hecho** — `status` opcional en `CreatePortalSchema`, excluido de `UpdatePortalSchema` (guardrail de auditoría), ver §17.2 |
 | Ally: Nombre/Tipo/NIT/Email/Teléfono/Ciudad | Ya existen (`tradeName`, `categoryId`, `taxId`, `contactEmail`, `contactPhone`, `city`) | Igual | `CreateCommerceSchema` los tiene todos | `EXISTS` | **Hecho** — reordenado a 2 secciones visuales, sin tocar backend, ver §17.3 |
 | Ally: Dirección | Requerida (`NOT NULL`) | Marcada "(opcional)" en la imagen | `address varchar NOT NULL` | Discrepancia visual, no `BACKEND_GAP` | El backend manda: se mantiene requerida; la imagen se equivoca en esa etiqueta |
@@ -842,6 +924,35 @@ cuando entran en conflicto:
 | Alertas de transacciones | `AlertsCard` ya deriva de transacciones reales (3 más recientes); "Marcar todas como leídas" es decorativo (sin `onClick`) | Igual visualmente, con persistencia real de leído/no-leído | No existía tabla de lectura en las 18 tablas reales de Postgres | `BACKEND_GAP` (persistencia leído/no-leído) | **Hecho** — `transaction_alert_reads` (mínima, no un `Notification` completo), ver §17.4 |
 
 ## 18. Historial de este documento
+
+- **2026-09-03 (Portal: displayName/serviceType/description/logo reales)** —
+  El usuario revirtió explícitamente la decisión de la pasada anterior de
+  no implementar estos campos ("pero igual no modificaste el formulario de
+  creación de portal como lo indiqué"). Cerrado de punta a punta:
+  migración aditiva (4 columnas nullable en `portals`), `CreatePortalSchema`
+  las exige en creación, `UpdatePortalSchema` las deja opcionales (bug real
+  encontrado y corregido: la primera versión bloqueaba renombrar los 3
+  portales sembrados, que no tienen estos campos). Logo: storage local en
+  disco (decisión del usuario), `multer` agregado como dependencia directa,
+  validación real por magic bytes (no solo `Content-Type`), `GET`
+  deliberadamente público (razón documentada en §17.2), `lib/api/client.ts`
+  gana soporte real para `FormData`. `serviceType` es texto libre a
+  propósito — la imagen lo muestra como dropdown pero no existe un catálogo
+  de categorías de portal confirmado en ningún doc de negocio.
+  Migración `AddPortalFields` escrita a mano (mismo patrón ya documentado
+  en Slice 5: `migration:generate` diffó drift no relacionado sobre FKs
+  hand-named de migraciones anteriores). Hallazgo real no relacionado con
+  el código: ~22 portales de prueba acumulados en la base de desarrollo por
+  las corridas E2E de toda la sesión hacían que la página `/portales`
+  (N+1 de comercios por portal, preexistente) se acercara sola al límite
+  real del rate limiter — limpiados tras verificar cero dependientes.
+  Verificado: `@repo/contracts` 58/58, `api` unit 46/46, `test:integration`
+  85/85, `test:auth-cutover-rehearsal` 12/12; `dashboard-web` unit 43/43;
+  quality gate completo del monorepo (`turbo run typecheck/lint/build`)
+  limpio en los 4 packages/apps; `e2e/*.spec.ts` 21/21 (verificado en una
+  corrida secuencial completa, 19/21 juntos + los 2 restantes aislados —
+  mismo patrón de rate limiter ya documentado), `visual.spec.ts` 21/21 (3
+  viewports, sin regresión).
 
 - **2026-09-02 (corrección funcional/visual — Slice 5: alertas de
   transacciones + cierre de los 5 slices)** — Última pasada de

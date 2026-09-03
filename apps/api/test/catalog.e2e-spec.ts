@@ -6,6 +6,7 @@ import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/config/configure-app';
 import type { Env } from '../src/config/env.schema';
 import { TestSession } from './helpers/http';
+import { PORTAL_FIXTURE_FIELDS } from './helpers/portal-fixture';
 import { seedSuperadmin } from './helpers/seed-superadmin';
 
 /** Portal/Category/Commerce/Service CRUD, status/publish lifecycle, and the cross-table category↔portal invariant (docs/adr/011 §1, CommercesService). */
@@ -33,7 +34,7 @@ describe('catalog (integration)', () => {
 
   describe('Portal', () => {
     it('POST /portals creates a portal, INACTIVE by default is false — starts ACTIVE and unpublished', async () => {
-      const res = await superadmin.post('/api/v1/portals').send({ name: `Avanza ${Date.now()}` });
+      const res = await superadmin.post('/api/v1/portals').send({ name: `Avanza ${Date.now()}`, ...PORTAL_FIXTURE_FIELDS });
       expect(res.status).toBe(201);
       expect(res.body).toMatchObject({ status: 'ACTIVE', isPublished: false });
       portalId = res.body.id;
@@ -68,9 +69,9 @@ describe('catalog (integration)', () => {
 
     it('POST /portals with a duplicate name returns 409', async () => {
       const name = `Duplicate Portal ${Date.now()}`;
-      const first = await superadmin.post('/api/v1/portals').send({ name });
+      const first = await superadmin.post('/api/v1/portals').send({ name, ...PORTAL_FIXTURE_FIELDS });
       expect(first.status).toBe(201);
-      const second = await superadmin.post('/api/v1/portals').send({ name });
+      const second = await superadmin.post('/api/v1/portals').send({ name, ...PORTAL_FIXTURE_FIELDS });
       expect(second.status).toBe(409);
     });
   });
@@ -84,7 +85,7 @@ describe('catalog (integration)', () => {
     });
 
     it('two different portals may each have a category with the same name', async () => {
-      const otherPortal = await superadmin.post('/api/v1/portals').send({ name: `Otro Portal ${Date.now()}` });
+      const otherPortal = await superadmin.post('/api/v1/portals').send({ name: `Otro Portal ${Date.now()}`, ...PORTAL_FIXTURE_FIELDS });
       const res = await superadmin
         .post(`/api/v1/portals/${otherPortal.body.id}/categories`)
         .send({ name: 'Instituciones educativas' });
@@ -117,7 +118,7 @@ describe('catalog (integration)', () => {
     });
 
     it('using a categoryId that belongs to a different portal returns 409', async () => {
-      const otherPortal = await superadmin.post('/api/v1/portals').send({ name: `Portal Ajeno ${Date.now()}` });
+      const otherPortal = await superadmin.post('/api/v1/portals').send({ name: `Portal Ajeno ${Date.now()}`, ...PORTAL_FIXTURE_FIELDS });
       const otherCategory = await superadmin
         .post(`/api/v1/portals/${otherPortal.body.id}/categories`)
         .send({ name: 'Otra categoría' });
@@ -204,7 +205,7 @@ describe('catalog (integration)', () => {
       const loginRes = await adminCommerce.login(email, createRes.body.temporaryPassword);
       expect(loginRes.status).toBe(200);
 
-      const otherPortal = await superadmin.post('/api/v1/portals').send({ name: `Portal Ajeno Cat ${Date.now()}` });
+      const otherPortal = await superadmin.post('/api/v1/portals').send({ name: `Portal Ajeno Cat ${Date.now()}`, ...PORTAL_FIXTURE_FIELDS });
       otherPortalId = otherPortal.body.id;
       const otherCategory = await superadmin
         .post(`/api/v1/portals/${otherPortalId}/categories`)

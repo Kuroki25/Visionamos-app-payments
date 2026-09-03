@@ -45,3 +45,6 @@ Thumbs.db
 
 # Local database backups (pg_dump) — real dev data, never committed.
 .backups/
+
+# User-uploaded files (Portal logos, disk storage — docs/adr, PortalsService.uploadLogo).
+apps/api/uploads/
