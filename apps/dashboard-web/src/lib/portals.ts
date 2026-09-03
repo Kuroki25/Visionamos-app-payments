@@ -16,6 +16,10 @@ import type { Tone } from './tone';
 export interface PortalRow {
   id: string;
   name: string;
+  displayName: string | null;
+  serviceType: string | null;
+  description: string | null;
+  logoUrl: string | null;
   initials: string;
   comercios: number;
   tx: number;
@@ -34,6 +38,10 @@ export function buildPortalRows(
     return {
       id: portal.id,
       name: portal.name,
+      displayName: portal.displayName,
+      serviceType: portal.serviceType,
+      description: portal.description,
+      logoUrl: portal.logoUrl,
       initials: portal.name.slice(0, 2).toUpperCase(),
       comercios,
       tx,

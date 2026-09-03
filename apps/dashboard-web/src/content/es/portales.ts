@@ -1,9 +1,10 @@
 /**
  * Copy for "Gestión de Portales" and the portal-form modal. Matches Claude
- * Design's `titles.portales` / `isPortales` section, adapted to the real
- * `Portal` shape (`@repo/contracts`: only `name` — the mock's "nombre de
- * visualización", "tipo de servicio", "descripción" and "logo" fields
- * don't exist on the real entity, see `lib/portals.ts`'s docblock).
+ * Design's `titles.portales` / `isPortales` section. `displayName`/
+ * `serviceType`/`description`/logo (`@repo/contracts`) are real fields as
+ * of docs/frontend/DASHBOARD_SOURCE_OF_TRUTH.md §17.2 — `serviceType` is
+ * free text, not the closed dropdown the reference image shows, since no
+ * confirmed category list exists (see the entity's own docblock).
  */
 export const portalesPage = {
   title: 'Gestión de Portales',
@@ -27,7 +28,23 @@ export const portalesPage = {
     editSubtitle: 'Actualiza la información del portal',
     nameLabel: 'Nombre del portal',
     namePlaceholder: 'Ej. Red Avanza',
-    requiredError: 'El nombre del portal es obligatorio.',
+    displayNameLabel: 'Nombre de visualización',
+    displayNamePlaceholder: 'Ej. Plataforma Avanza',
+    displayNameHint: 'Nombre que verán los usuarios',
+    serviceTypeLabel: 'Tipo de servicio',
+    serviceTypePlaceholder: 'Ej. Educación',
+    descriptionLabel: 'Descripción',
+    descriptionPlaceholder: 'Describe brevemente los servicios que ofrece este portal.',
+    descriptionMaxLength: 500,
+    descriptionCounterSuffix: 'caracteres',
+    logoLabel: 'Logotipo del portal',
+    logoDropText: 'Clic para subir o arrastra una imagen',
+    logoDropHint: 'PNG, JPG, WebP (máx. 5MB)',
+    logoChange: 'Cambiar imagen',
+    logoInvalidTypeError: 'El logotipo debe ser PNG, JPG o WebP.',
+    logoTooLargeError: 'El logotipo no puede superar los 5MB.',
+    logoUploadError: 'El portal se creó, pero no se pudo subir el logotipo. Podés intentarlo de nuevo desde Editar.',
+    requiredError: 'Completa todos los campos obligatorios.',
     activeLabel: 'Portal activo',
   },
   toasts: {

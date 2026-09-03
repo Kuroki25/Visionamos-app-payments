@@ -21,6 +21,10 @@ function user(overrides: Partial<User>): User {
 const portal: Portal = {
   id: 'p1',
   name: 'Otrahuilca',
+  displayName: null,
+  serviceType: null,
+  description: null,
+  logoUrl: null,
   status: 'ACTIVE',
   isPublished: false,
   createdAt: '2026-01-01T00:00:00.000Z',

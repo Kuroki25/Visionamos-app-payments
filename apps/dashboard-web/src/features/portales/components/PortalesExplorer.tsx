@@ -125,7 +125,7 @@ export function PortalesExplorer({ headerStats, rows }: { headerStats: HeaderSta
                   {
                     key: 'edit',
                     label: portalesPage.menu.edit,
-                    onSelect: () => setFormTarget({ id: row.id, name: row.name }),
+                    onSelect: () => setFormTarget(row),
                   },
                   {
                     key: 'toggle',

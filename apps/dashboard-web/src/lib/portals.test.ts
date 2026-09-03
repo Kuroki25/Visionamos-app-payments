@@ -7,6 +7,10 @@ function portal(overrides: Partial<Portal>): Portal {
   return {
     id: 'p1',
     name: 'Otrahuilca',
+    displayName: null,
+    serviceType: null,
+    description: null,
+    logoUrl: null,
     status: 'ACTIVE',
     isPublished: false,
     createdAt: '2026-01-01T00:00:00.000Z',
@@ -71,6 +75,25 @@ describe('buildPortalRows', () => {
 
     expect(rows[0]).toMatchObject({ id: 'p1', comercios: 1, tx: 2, estadoLabel: 'Activo', estadoTone: 'success' });
     expect(rows[1]).toMatchObject({ id: 'p2', comercios: 0, tx: 1, estadoLabel: 'Inactivo', estadoTone: 'danger' });
+  });
+
+  it('carries displayName/serviceType/description/logoUrl through for the edit form (§17.2)', () => {
+    const portals = [
+      portal({
+        displayName: 'Plataforma Avanza',
+        serviceType: 'Educación',
+        description: 'Descripción real.',
+        logoUrl: '/portals/p1/logo',
+      }),
+    ];
+    const rows = buildPortalRows(portals, new Map(), []);
+
+    expect(rows[0]).toMatchObject({
+      displayName: 'Plataforma Avanza',
+      serviceType: 'Educación',
+      description: 'Descripción real.',
+      logoUrl: '/portals/p1/logo',
+    });
   });
 });
 

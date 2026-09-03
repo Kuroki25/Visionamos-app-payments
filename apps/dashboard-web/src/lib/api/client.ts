@@ -74,6 +74,13 @@ async function request<T>(path: string, options: ApiRequestOptions = {}): Promis
   }
   const csrfToken = SAFE_METHODS.has(method) ? undefined : readCookie(CSRF_COOKIE_NAME);
 
+  // `FormData` (file uploads, e.g. Portal logo — `PortalForm.tsx`) must
+  // NOT be JSON-stringified, and must NOT get an explicit `Content-Type`:
+  // the browser sets `multipart/form-data; boundary=...` itself, and a
+  // manually-set header here would omit that boundary and break parsing
+  // server-side (multer).
+  const isFormData = options.body instanceof FormData;
+
   let response: Response;
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
@@ -84,13 +91,13 @@ async function request<T>(path: string, options: ApiRequestOptions = {}): Promis
       // unauthenticated (docs/adr/013-better-auth-migration.md).
       credentials: 'include',
       headers: {
-        ...(options.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+        ...(options.body !== undefined && !isFormData ? { 'Content-Type': 'application/json' } : {}),
         ...(csrfToken !== undefined ? { [CSRF_HEADER_NAME]: csrfToken } : {}),
         ...options.headers,
       },
       // `exactOptionalPropertyTypes` rejects `body: undefined` explicitly —
       // the key must be entirely absent, not present with an undefined value.
-      ...(options.body !== undefined ? { body: JSON.stringify(options.body) } : {}),
+      ...(options.body !== undefined ? { body: isFormData ? (options.body as FormData) : JSON.stringify(options.body) } : {}),
       ...(options.signal !== undefined ? { signal: options.signal } : {}),
     });
   } catch (cause) {

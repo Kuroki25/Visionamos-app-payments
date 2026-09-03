@@ -6,6 +6,7 @@ import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/config/configure-app';
 import type { Env } from '../src/config/env.schema';
 import { TestSession } from './helpers/http';
+import { PORTAL_FIXTURE_FIELDS } from './helpers/portal-fixture';
 import { seedSuperadmin } from './helpers/seed-superadmin';
 
 /**
@@ -32,9 +33,9 @@ describe('users & roles (integration)', () => {
     superadmin = await TestSession.create(app.getHttpServer());
     await superadmin.login(seeded.email, seeded.password);
 
-    const portalA = await superadmin.post('/api/v1/portals').send({ name: `Portal A ${Date.now()}` });
+    const portalA = await superadmin.post('/api/v1/portals').send({ name: `Portal A ${Date.now()}`, ...PORTAL_FIXTURE_FIELDS });
     portalAId = portalA.body.id;
-    const portalB = await superadmin.post('/api/v1/portals').send({ name: `Portal B ${Date.now()}` });
+    const portalB = await superadmin.post('/api/v1/portals').send({ name: `Portal B ${Date.now()}`, ...PORTAL_FIXTURE_FIELDS });
     portalBId = portalB.body.id;
 
     const categoryA = await superadmin.post(`/api/v1/portals/${portalAId}/categories`).send({ name: 'Educación' });

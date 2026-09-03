@@ -6,6 +6,7 @@ import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/config/configure-app';
 import type { Env } from '../src/config/env.schema';
 import { TestSession } from './helpers/http';
+import { PORTAL_FIXTURE_FIELDS } from './helpers/portal-fixture';
 import { seedSuperadmin } from './helpers/seed-superadmin';
 import { seedTransaction } from './helpers/seed-transaction';
 
@@ -55,9 +56,9 @@ describe('transactions (integration)', () => {
     superadmin = await TestSession.create(app.getHttpServer());
     await superadmin.login(seeded.email, seeded.password);
 
-    const portalA = await superadmin.post('/api/v1/portals').send({ name: `Portal TX A ${Date.now()}` });
+    const portalA = await superadmin.post('/api/v1/portals').send({ name: `Portal TX A ${Date.now()}`, ...PORTAL_FIXTURE_FIELDS });
     portalAId = portalA.body.id;
-    const portalB = await superadmin.post('/api/v1/portals').send({ name: `Portal TX B ${Date.now()}` });
+    const portalB = await superadmin.post('/api/v1/portals').send({ name: `Portal TX B ${Date.now()}`, ...PORTAL_FIXTURE_FIELDS });
     portalBId = portalB.body.id;
 
     const a = await createCommerceAndService(portalAId, 'A');

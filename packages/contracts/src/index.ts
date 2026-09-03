@@ -20,7 +20,14 @@ export type { CreateUser, UpdateUser, UpdateUserStatus, User, CreateUserResponse
 export { addRoleScopeChecks, ReassignScopeSchema, RoleAssignmentSchema } from './role-assignments';
 export type { ReassignScope, RoleAssignment } from './role-assignments';
 
-export { CreatePortalSchema, UpdatePortalSchema, UpdatePortalStatusSchema, PortalSchema } from './portals';
+export {
+  CreatePortalSchema,
+  UpdatePortalSchema,
+  UpdatePortalStatusSchema,
+  PortalSchema,
+  PORTAL_LOGO_MAX_BYTES,
+  PORTAL_LOGO_ALLOWED_MIME_TYPES,
+} from './portals';
 export type { CreatePortal, UpdatePortal, UpdatePortalStatus, Portal } from './portals';
 
 export { CreateCategorySchema, UpdateCategorySchema, CategorySchema } from './categories';
