@@ -15,11 +15,18 @@ export interface PortalFormTarget {
 }
 
 /**
- * Create/edit portal — the real `Portal` entity is just `{ name }`
- * beyond its id/status/timestamps (`@repo/contracts`, `portals.ts`), so
- * this form has one field, not the mock's "nombre de visualización / tipo
- * de servicio / descripción / logo" (none of those exist on the real
- * entity) — see `lib/portals.ts`'s docblock.
+ * Create/edit portal — the real `Portal` entity is just
+ * `{ name, status }` beyond its id/timestamps (`@repo/contracts`,
+ * `portals.ts`), so this form has two real fields, not the mock's "nombre
+ * de visualización / tipo de servicio / descripción / logo"
+ * (`docs/frontend/DASHBOARD_SOURCE_OF_TRUTH.md` §17.5: confirmed
+ * `BACKEND_GAP` without a business decision, deliberately not built) —
+ * see `lib/portals.ts`'s docblock. "Portal activo" (create only —
+ * `CreatePortalSchema.status`, optional, defaults to `ACTIVE`) mirrors
+ * `docs/frontend/references/06-portal-form-expected-bottom.png`'s toggle.
+ * Edit mode never sends `status`: `UpdatePortalSchema` omits it on
+ * purpose, `PATCH /portals/:id/status` is the only audited path
+ * (`RowActionsMenu`'s Habilitar/Deshabilitar action).
  */
 export function PortalForm({
   target,
@@ -32,6 +39,7 @@ export function PortalForm({
 }) {
   const isEdit = target !== null && target !== 'create';
   const [name, setName] = useState(isEdit ? target.name : '');
+  const [active, setActive] = useState(true);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -51,7 +59,7 @@ export function PortalForm({
         await apiClient.patch(`/portals/${target.id}`, { name: name.trim() });
         onSaved(portalesPage.toasts.updated);
       } else {
-        await apiClient.post('/portals', { name: name.trim() });
+        await apiClient.post('/portals', { name: name.trim(), status: active ? 'ACTIVE' : 'INACTIVE' });
         onSaved(portalesPage.toasts.created);
       }
     } catch (cause) {
@@ -79,6 +87,27 @@ export function PortalForm({
           placeholder={copy.namePlaceholder}
           className="w-full rounded-control border border-(--color-border) bg-(--color-bg) px-3.5 py-2.5 text-[13.5px] text-(--color-fg) outline-none transition-[border-color,box-shadow] focus:border-(--color-accent) focus:ring-[3px] focus:ring-(--color-accent-soft)"
         />
+        {!isEdit ? (
+          <div className="mt-4 flex items-center justify-between">
+            <span className="text-[13px] font-semibold text-(--color-fg)">{copy.activeLabel}</span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={active}
+              aria-label={copy.activeLabel}
+              onClick={() => setActive((v) => !v)}
+              className="relative inline-flex h-5 w-9 shrink-0 items-center rounded-full outline-none transition-colors focus-visible:ring-[3px] focus-visible:ring-(--color-accent-soft)"
+              style={{ background: active ? 'var(--color-accent)' : 'var(--color-border)' }}
+            >
+              <span
+                aria-hidden
+                className="inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform"
+                style={{ transform: active ? 'translateX(18px)' : 'translateX(3px)' }}
+              />
+            </button>
+          </div>
+        ) : null}
+
         {error ? <p className="mt-2 text-[12.5px] text-(--color-danger)">{error}</p> : null}
 
         <div className="mt-6 flex gap-2.5">

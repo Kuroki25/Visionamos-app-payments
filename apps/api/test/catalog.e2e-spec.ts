@@ -192,10 +192,8 @@ describe('catalog (integration)', () => {
 
     beforeAll(async () => {
       const email = `admin-commerce-cat-${Date.now()}@example.com`;
-      const password = 'a-strong-password-123';
       const createRes = await superadmin.post('/api/v1/users').send({
         email,
-        password,
         fullName: 'Admin Commerce Cat',
         role: 'ADMIN_COMMERCE',
         scopeCommerceId: commerceId,
@@ -203,7 +201,7 @@ describe('catalog (integration)', () => {
       expect(createRes.status).toBe(201);
 
       adminCommerce = await TestSession.create(app.getHttpServer());
-      const loginRes = await adminCommerce.login(email, password);
+      const loginRes = await adminCommerce.login(email, createRes.body.temporaryPassword);
       expect(loginRes.status).toBe(200);
 
       const otherPortal = await superadmin.post('/api/v1/portals').send({ name: `Portal Ajeno Cat ${Date.now()}` });

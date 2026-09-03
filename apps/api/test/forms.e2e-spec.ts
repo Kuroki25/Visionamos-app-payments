@@ -48,16 +48,14 @@ describe('forms (integration)', () => {
     serviceId = service.body.id;
 
     const adminCommerceEmail = `admin-commerce-forms-${Date.now()}@example.com`;
-    const adminCommercePassword = 'a-strong-password-123';
-    await superadmin.post('/api/v1/users').send({
+    const adminCommerceCreateRes = await superadmin.post('/api/v1/users').send({
       email: adminCommerceEmail,
-      password: adminCommercePassword,
       fullName: 'Admin Commerce',
       role: 'ADMIN_COMMERCE',
       scopeCommerceId: commerce.body.id,
     });
     adminCommerce = await TestSession.create(app.getHttpServer());
-    await adminCommerce.login(adminCommerceEmail, adminCommercePassword);
+    await adminCommerce.login(adminCommerceEmail, adminCommerceCreateRes.body.temporaryPassword);
   });
 
   afterAll(async () => {

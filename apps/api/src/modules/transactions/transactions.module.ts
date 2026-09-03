@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { CommerceEntity } from '../commerces/entities/commerce.entity';
 import { RoleAssignmentsModule } from '../role-assignments/role-assignments.module';
 import { ServiceEntity } from '../services/entities/service.entity';
+import { TransactionAlertReadEntity } from './entities/transaction-alert-read.entity';
 import { TransactionEventEntity } from './entities/transaction-event.entity';
 import { TransactionEntity } from './entities/transaction.entity';
 import { TransactionsController } from './transactions.controller';
@@ -17,7 +18,7 @@ import { TransactionsService } from './transactions.service';
  */
 @Module({
   imports: [
-    TypeOrmModule.forFeature([TransactionEntity, TransactionEventEntity, ServiceEntity, CommerceEntity]),
+    TypeOrmModule.forFeature([TransactionEntity, TransactionEventEntity, TransactionAlertReadEntity, ServiceEntity, CommerceEntity]),
     RoleAssignmentsModule,
   ],
   controllers: [TransactionsController],

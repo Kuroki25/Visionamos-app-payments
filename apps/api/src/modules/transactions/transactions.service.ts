@@ -1,13 +1,21 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import type { PaymentMethod, Transaction, TransactionEvent, TransactionEventSource, TransactionStatus } from '@repo/contracts';
+import type {
+  PaymentMethod,
+  Transaction,
+  TransactionAlert,
+  TransactionEvent,
+  TransactionEventSource,
+  TransactionStatus,
+} from '@repo/contracts';
 import { randomUUID } from 'node:crypto';
-import type { Repository } from 'typeorm';
+import { In, type Repository } from 'typeorm';
 
 import type { AuthenticatedRequestUser } from '../auth/types/authenticated-request-user.type';
 import { CommerceEntity } from '../commerces/entities/commerce.entity';
 import { ScopeAuthorizationService } from '../role-assignments/scope-authorization.service';
 import { ServiceEntity } from '../services/entities/service.entity';
+import { TransactionAlertReadEntity } from './entities/transaction-alert-read.entity';
 import { TransactionEventEntity } from './entities/transaction-event.entity';
 import { TransactionEntity } from './entities/transaction.entity';
 
@@ -90,6 +98,8 @@ export class TransactionsService {
     private readonly servicesRepository: Repository<ServiceEntity>,
     @InjectRepository(CommerceEntity)
     private readonly commercesRepository: Repository<CommerceEntity>,
+    @InjectRepository(TransactionAlertReadEntity)
+    private readonly alertReadsRepository: Repository<TransactionAlertReadEntity>,
     private readonly scopeAuthorization: ScopeAuthorizationService,
   ) {}
 
@@ -207,6 +217,51 @@ export class TransactionsService {
       order: { occurredAt: 'ASC' },
     });
     return events.map(toTransactionEvent);
+  }
+
+  /**
+   * "Alertas de transacciones" (Transacciones page, §17.4) — the same
+   * scope-filtered transactions `findAll` returns, each annotated with
+   * whether the current actor has already marked it read. Never
+   * downloads-all-then-filters-in-frontend: the scope filter runs here,
+   * server-side, same as `findAll` (OWASP API1).
+   */
+  async findAlerts(actor: AuthenticatedRequestUser): Promise<TransactionAlert[]> {
+    const transactions = await this.findAll(actor);
+    if (transactions.length === 0) {
+      return [];
+    }
+
+    const reads = await this.alertReadsRepository.find({
+      where: { userId: actor.sub, transactionId: In(transactions.map((t) => t.id)) },
+    });
+    const readIds = new Set(reads.map((r) => r.transactionId));
+
+    return transactions.map((t) => ({ ...t, isRead: readIds.has(t.id) }));
+  }
+
+  /**
+   * "Marcar todas como leídas". `transactionIds` comes from the client
+   * (the alerts it currently has rendered), but is never trusted blindly —
+   * intersected against the actor's real, server-computed scope first, so
+   * an id outside it is silently dropped rather than recorded (same BOLA
+   * posture as every other scoped read here). Idempotent: `upsert` with
+   * `ON CONFLICT DO NOTHING` on the (user, transaction) unique pair, so
+   * re-marking an already-read alert is a no-op, not an error.
+   */
+  async markAlertsRead(actor: AuthenticatedRequestUser, transactionIds: string[]): Promise<TransactionAlert[]> {
+    const inScope = await this.findAll(actor);
+    const inScopeIds = new Set(inScope.map((t) => t.id));
+    const validIds = transactionIds.filter((id) => inScopeIds.has(id));
+
+    if (validIds.length > 0) {
+      await this.alertReadsRepository.upsert(
+        validIds.map((transactionId) => ({ userId: actor.sub, transactionId })),
+        { conflictPaths: ['userId', 'transactionId'], skipUpdateIfNoValuesChanged: true },
+      );
+    }
+
+    return this.findAlerts(actor);
   }
 
   private async loadTransaction(id: string): Promise<TransactionEntity> {

@@ -8,6 +8,7 @@ import { FormVersionEntity } from '../modules/forms/entities/form-version.entity
 import { PortalEntity } from '../modules/portals/entities/portal.entity';
 import { RoleAssignmentEntity } from '../modules/role-assignments/entities/role-assignment.entity';
 import { ServiceEntity } from '../modules/services/entities/service.entity';
+import { TransactionAlertReadEntity } from '../modules/transactions/entities/transaction-alert-read.entity';
 import { TransactionEventEntity } from '../modules/transactions/entities/transaction-event.entity';
 import { TransactionEntity } from '../modules/transactions/entities/transaction.entity';
 import { UserEntity } from '../modules/users/entities/user.entity';
@@ -35,4 +36,5 @@ export const ENTITIES = [
   FormSubmissionEntity,
   TransactionEntity,
   TransactionEventEntity,
+  TransactionAlertReadEntity,
 ];

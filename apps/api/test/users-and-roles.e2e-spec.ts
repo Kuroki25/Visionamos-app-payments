@@ -71,19 +71,35 @@ describe('users & roles (integration)', () => {
     await app.close();
   });
 
+  // No `password` field: `POST /users` generates a provisional one
+  // server-side and returns it once as `temporaryPassword` (§17.1) —
+  // callers that need to log in as the created user read it from the
+  // response, they never choose it.
   async function createUser(session: TestSession, overrides: Record<string, unknown>) {
     return session.post('/api/v1/users').send({
       email: `user-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`,
-      password: 'a-strong-password-123',
       fullName: 'Test User',
       ...overrides,
     });
   }
 
-  it('SUPERADMIN creates an ADMIN_PORTAL for Portal A', async () => {
+  it('SUPERADMIN creates an ADMIN_PORTAL for Portal A, and gets a one-time provisional password back', async () => {
     const res = await createUser(superadmin, { role: 'ADMIN_PORTAL', scopePortalId: portalAId });
     expect(res.status).toBe(201);
     expect(res.body).toMatchObject({ role: 'ADMIN_PORTAL', scopePortalId: portalAId });
+    expect(typeof res.body.temporaryPassword).toBe('string');
+    expect(res.body.temporaryPassword.length).toBeGreaterThanOrEqual(12);
+
+    // Real login proof: the returned password actually works, not just a
+    // field present in the response shape.
+    const freshSession = await TestSession.create(app.getHttpServer());
+    const loginRes = await freshSession.login(res.body.email, res.body.temporaryPassword);
+    expect(loginRes.status).toBe(200);
+
+    // Never returned again — GET /users/:id never carries a password field.
+    const getRes = await superadmin.get(`/api/v1/users/${res.body.id}`);
+    expect(getRes.body).not.toHaveProperty('temporaryPassword');
+    expect(getRes.body).not.toHaveProperty('password');
   });
 
   describe('ADMIN_PORTAL(A) creation authority', () => {
@@ -93,14 +109,13 @@ describe('users & roles (integration)', () => {
 
     beforeAll(async () => {
       adminPortalAEmail = `admin-portal-a-${Date.now()}@example.com`;
-      adminPortalAPassword = 'a-strong-password-123';
       const createRes = await createUser(superadmin, {
         email: adminPortalAEmail,
-        password: adminPortalAPassword,
         role: 'ADMIN_PORTAL',
         scopePortalId: portalAId,
       });
       expect(createRes.status).toBe(201);
+      adminPortalAPassword = createRes.body.temporaryPassword;
 
       adminPortalA = await TestSession.create(app.getHttpServer());
       const loginRes = await adminPortalA.login(adminPortalAEmail, adminPortalAPassword);
@@ -156,14 +171,13 @@ describe('users & roles (integration)', () => {
 
     beforeAll(async () => {
       const email = `admin-commerce-${Date.now()}@example.com`;
-      const password = 'a-strong-password-123';
       const createRes = await createUser(superadmin, {
         email,
-        password,
         role: 'ADMIN_COMMERCE',
         scopeCommerceId: commerceAId,
       });
       expect(createRes.status).toBe(201);
+      const password = createRes.body.temporaryPassword;
 
       adminCommerce = await TestSession.create(app.getHttpServer());
       const loginRes = await adminCommerce.login(email, password);
@@ -189,9 +203,9 @@ describe('users & roles (integration)', () => {
   describe('VIEWER has no creation rights', () => {
     it('POST /users returns 403 for a VIEWER (BFLA)', async () => {
       const email = `viewer-${Date.now()}@example.com`;
-      const password = 'a-strong-password-123';
-      const createRes = await createUser(superadmin, { email, password, role: 'VIEWER', scopePortalId: portalAId });
+      const createRes = await createUser(superadmin, { email, role: 'VIEWER', scopePortalId: portalAId });
       expect(createRes.status).toBe(201);
+      const password = createRes.body.temporaryPassword;
 
       const viewerSession = await TestSession.create(app.getHttpServer());
       await viewerSession.login(email, password);

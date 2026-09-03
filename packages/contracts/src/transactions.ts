@@ -83,3 +83,29 @@ export const TransactionSchema = z.object({
   updatedAt: z.iso.datetime(),
 });
 export type Transaction = z.infer<typeof TransactionSchema>;
+
+/**
+ * `GET /transactions/alerts` — the same scope-filtered transactions
+ * `GET /transactions` returns, each annotated with whether the *current*
+ * actor has marked it read (`transaction_alert_reads`, one row per
+ * (user, transaction) — docs/frontend/DASHBOARD_SOURCE_OF_TRUTH.md §17.4).
+ * `isRead` is per-viewer, not a property of the Transaction itself, which
+ * is why it lives on this separate response shape and not on
+ * `TransactionSchema`.
+ */
+export const TransactionAlertSchema = TransactionSchema.extend({
+  isRead: z.boolean(),
+});
+export type TransactionAlert = z.infer<typeof TransactionAlertSchema>;
+
+/**
+ * Body of `POST /transactions/alerts/read-all`. The server re-validates
+ * every id against the actor's real scope before recording anything — a
+ * client-supplied id outside that scope is silently dropped, never used to
+ * probe or mark state for a transaction the actor can't see (OWASP API1,
+ * Broken Object Level Authorization).
+ */
+export const MarkAlertsReadSchema = z.object({
+  transactionIds: z.array(z.uuid()).min(1),
+});
+export type MarkAlertsRead = z.infer<typeof MarkAlertsReadSchema>;

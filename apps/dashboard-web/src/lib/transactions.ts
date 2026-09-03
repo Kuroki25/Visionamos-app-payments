@@ -1,4 +1,4 @@
-import type { Transaction } from '@repo/contracts';
+import type { Transaction, TransactionAlert } from '@repo/contracts';
 
 import { transaccionesPage } from '../content/es/transacciones';
 import { paymentMethodLabels, transactionStatus } from '../content/es/transactions';
@@ -85,4 +85,29 @@ export function recentTxRows(transactions: Transaction[], limit: number): TxRow[
 /** Same "most recent N" logic as `recentTxRows`, for the alert feed instead. */
 export function recentTxAlerts(transactions: Transaction[], limit: number): TxAlert[] {
   return sortByRecent(transactions).slice(0, limit).map(toTxAlert);
+}
+
+/**
+ * The Transacciones page's real "Alertas" feed (`GET /transactions/alerts`,
+ * `docs/frontend/DASHBOARD_SOURCE_OF_TRUTH.md` §17.4) — same displayable
+ * shape as `TxAlert` plus `transactionId` (the real UUID, needed to call
+ * `POST /transactions/alerts/read-all`; `TxAlert.id` is the shortened
+ * `#XXXXXX` display form, not usable as an API argument) and `isRead`
+ * (per-viewer, real, not decorative — see `AlertsCard.tsx`).
+ */
+export interface TransactionAlertView extends TxAlert {
+  transactionId: string;
+  isRead: boolean;
+}
+
+export function toTransactionAlertView(alert: TransactionAlert): TransactionAlertView {
+  return { ...toTxAlert(alert), transactionId: alert.id, isRead: alert.isRead };
+}
+
+/** Same "most recent N" logic as `recentTxAlerts`, over the real, isRead-annotated alerts instead of plain transactions. */
+export function recentTransactionAlertViews(alerts: TransactionAlert[], limit: number): TransactionAlertView[] {
+  return [...alerts]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, limit)
+    .map(toTransactionAlertView);
 }

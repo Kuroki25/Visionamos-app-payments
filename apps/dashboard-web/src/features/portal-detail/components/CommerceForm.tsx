@@ -30,11 +30,18 @@ const EMPTY = {
 
 /**
  * Create a Commerce (Aliado) — real fields from `CreateCommerceSchema`
- * (`@repo/contracts`): the mock's form (nombre/tipo/nit/email/telefono/
- * ciudad/dirección) is missing `legalName` and `contactName`, which the
- * real backend requires, and its "tipo" free-text options don't match
- * `categoryId` (a real, portal-specific `Category` picked from
- * `GET /portals/:portalId/categories`) — both adapted here.
+ * (`@repo/contracts`), reordered to match
+ * `docs/frontend/references/07-ally-form-expected-top.png`/
+ * `08-ally-form-expected-bottom.png` (`docs/frontend/DASHBOARD_SOURCE_OF_TRUTH.md`
+ * §17.3): visual-only change, no backend/contract touched. The image's
+ * "tipo" free-text doesn't exist as such — it maps onto `categoryId` (a
+ * real, portal-specific `Category` picked from
+ * `GET /portals/:portalId/categories`). `legalName`/`contactName` are
+ * real, backend-required fields the image doesn't show — kept, appended
+ * after the fields the image does show rather than removed. `address` is
+ * kept required (backend: `NOT NULL`) even though the image labels it
+ * "(opcional)" — the backend is the higher authority per this document's
+ * hierarchy when the two disagree.
  */
 export function CommerceForm({
   open,
@@ -110,30 +117,6 @@ export function CommerceForm({
           />
         </div>
         <div>
-          <label className={labelClass} htmlFor={`${uid}-legalName`}>
-            {copy.legalNameLabel} <span className="text-(--color-danger)">*</span>
-          </label>
-          <input
-            id={`${uid}-legalName`}
-            value={form.legalName}
-            onChange={(e) => set('legalName', e.target.value)}
-            placeholder={copy.legalNamePlaceholder}
-            className={inputClass}
-          />
-        </div>
-        <div>
-          <label className={labelClass} htmlFor={`${uid}-taxId`}>
-            {copy.taxIdLabel} <span className="text-(--color-danger)">*</span>
-          </label>
-          <input
-            id={`${uid}-taxId`}
-            value={form.taxId}
-            onChange={(e) => set('taxId', e.target.value)}
-            placeholder={copy.taxIdPlaceholder}
-            className={inputClass}
-          />
-        </div>
-        <div>
           <label className={labelClass} htmlFor={`${uid}-categoryId`}>
             {copy.categoryLabel} <span className="text-(--color-danger)">*</span>
           </label>
@@ -155,15 +138,37 @@ export function CommerceForm({
           </div>
           {categories.length === 0 ? <p className="mt-1.5 text-[11.5px] text-(--color-danger)">{copy.noCategoriesError}</p> : null}
         </div>
+        <div>
+          <label className={labelClass} htmlFor={`${uid}-taxId`}>
+            {copy.taxIdLabel} <span className="text-(--color-danger)">*</span>
+          </label>
+          <input
+            id={`${uid}-taxId`}
+            value={form.taxId}
+            onChange={(e) => set('taxId', e.target.value)}
+            placeholder={copy.taxIdPlaceholder}
+            className={inputClass}
+          />
+        </div>
+        {/* `legalName` is a real, backend-required field (`CreateCommerceSchema`)
+            that `07-ally-form-expected-top.png` doesn't show — kept, appended
+            after the 3 fields the image does show (§17.5: "EXISTS, imagen
+            incompleta" — the backend manda over an incomplete reference). */}
+        <div>
+          <label className={labelClass} htmlFor={`${uid}-legalName`}>
+            {copy.legalNameLabel} <span className="text-(--color-danger)">*</span>
+          </label>
+          <input
+            id={`${uid}-legalName`}
+            value={form.legalName}
+            onChange={(e) => set('legalName', e.target.value)}
+            placeholder={copy.legalNamePlaceholder}
+            className={inputClass}
+          />
+        </div>
 
         <div className="border-t border-(--color-border) pt-3 text-[12.5px] font-bold tracking-[.03em] text-(--color-fg-faint)">
           {copy.contactSection}
-        </div>
-        <div>
-          <label className={labelClass} htmlFor={`${uid}-contactName`}>
-            {copy.contactNameLabel} <span className="text-(--color-danger)">*</span>
-          </label>
-          <input id={`${uid}-contactName`} value={form.contactName} onChange={(e) => set('contactName', e.target.value)} className={inputClass} />
         </div>
         <div>
           <label className={labelClass} htmlFor={`${uid}-contactEmail`}>
@@ -190,10 +195,22 @@ export function CommerceForm({
           <input id={`${uid}-city`} value={form.city} onChange={(e) => set('city', e.target.value)} className={inputClass} />
         </div>
         <div>
+          {/* Backend requires `address` (`NOT NULL`) — the reference image
+              labels it "(opcional)", but the backend manda per this
+              document's authority hierarchy (§17.5: "El backend manda: se
+              mantiene requerida; la imagen se equivoca en esa etiqueta"). */}
           <label className={labelClass} htmlFor={`${uid}-address`}>
             {copy.addressLabel} <span className="text-(--color-danger)">*</span>
           </label>
           <input id={`${uid}-address`} value={form.address} onChange={(e) => set('address', e.target.value)} className={inputClass} />
+        </div>
+        {/* `contactName` — same reasoning as `legalName` above: real,
+            required, absent from the image. */}
+        <div>
+          <label className={labelClass} htmlFor={`${uid}-contactName`}>
+            {copy.contactNameLabel} <span className="text-(--color-danger)">*</span>
+          </label>
+          <input id={`${uid}-contactName`} value={form.contactName} onChange={(e) => set('contactName', e.target.value)} className={inputClass} />
         </div>
 
         {error ? <p className="text-[12.5px] text-(--color-danger)">{error}</p> : null}

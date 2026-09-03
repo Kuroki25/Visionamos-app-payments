@@ -3,16 +3,19 @@
 Fuente de verdad **técnica y visual** única para `apps/dashboard-web`
 (panel administrativo de Red Coopagos). Reemplaza y consolida
 `DASHBOARD_FRONTEND_SOURCE_OF_TRUTH.md` (arquitectura, pre-handoff) y el
-análisis de handoff de Claude Design — ver §10 "Historial de este
+análisis de handoff de Claude Design — ver §18 "Historial de este
 documento". No se crean documentos adicionales sin necesidad real.
 
 **Última validación real de extremo a extremo**: 2026-09-02, contra
 `apps/api` + PostgreSQL reales corriendo localmente (Docker,
 `docker-compose.yml`), datos de `pnpm --filter api seed:demo` +
 `seed:e2e-superadmin`, y las suites `apps/dashboard-web/e2e/*.spec.ts`
-(9/9 verde) + `e2e/visual.spec.ts` (20/20 verde, 3 viewports). **Cierre
-técnico del frontend: COMPLETED** — ver §16. Ver §9 para el detalle de
-qué se verificó realmente vs. qué quedó inferido.
+(18/18 verde) + `e2e/visual.spec.ts` (21/21 verde, 3 viewports); backend
+`apps/api` unit 46/46, `test:integration` 78/78,
+`test:auth-cutover-rehearsal` 12/12. **Cierre técnico del frontend:
+COMPLETED** — ver §16. Corrección funcional/visual de Usuarios/Portales/
+Aliados/Alertas (los 5 slices): COMPLETED — ver §17. Ver §9 para el
+detalle de qué se verificó realmente vs. qué quedó inferido.
 
 ## 1. Propósito
 
@@ -579,7 +582,362 @@ evidencia real ejecutada (no inferida). No quedan gaps P0/P1 conocidos;
 los ítems restantes en §11.5 son mejoras P2 o están fuera del alcance de
 negocio actual (email real, matriz de permisos exhaustiva), no bloqueos.
 
-## 17. Historial de este documento
+## 17. Functional UI Contracts
+
+Contratos funcionales+visuales por pantalla, verificados campo por campo
+contra el backend real (no contra el mock a ciegas — ver la jerarquía de
+autoridad: modelo de negocio → backend → Better Auth → RBAC/scopes →
+contracts → esta SoT → Claude Design). Referencias visuales en
+`docs/frontend/references/` (`current` = estado antes de esta pasada,
+`expected` = Claude Design). Regla de no-regresión: estos contratos son
+tan vinculantes como §9 — una sesión futura no puede simplificar un
+formulario aquí documentado sin actualizar esta sección primero.
+
+### 17.1 Users
+
+**Referencias**: `01-users-actions-current.png` (bug), `02-user-form-current.png`
+(antes), `03-user-form-expected.png` (Claude Design).
+
+**Menú de acciones (⋮)** — `FUNCTIONAL_BUG`, corregido:
+
+- **Causa raíz real**: implementación anterior usaba `useState(openMenuId)`
+  + `<div className="absolute">` posicionado dentro de la fila. El
+  contenedor de la tabla necesita `overflow-hidden` para las esquinas
+  redondeadas (`rounded-card`) — eso recorta el dropdown en cualquier fila
+  sin fila debajo para "darle espacio" (peor caso: la última fila de la
+  tabla, exactamente `01-users-actions-current.png`).
+- **Fix**: `src/components/ui/RowActionsMenu.tsx`, nuevo, sobre
+  `@radix-ui/react-dropdown-menu` (única dependencia de dropdown/headless
+  en el repo — se evaluó que no había ninguna ya instalada antes de
+  agregarla). Renderiza el contenido vía `DropdownMenu.Portal` a
+  `document.body`, fuera de cualquier `overflow`/stacking context de la
+  fila. Reemplaza el patrón en `UsersExplorer.tsx` y `PortalesExplorer.tsx`
+  (mismo componente, dos call sites).
+- **Verificado real** (stack real, no mocks): visible completo en la
+  última fila de Usuarios y Portales, Escape cierra, click-fuera cierra,
+  `Enter` abre con el primer item enfocado, `ArrowDown` navega, el foco
+  vuelve al trigger al cerrar, cero errores de consola. Regresión E2E:
+  `e2e/row-actions-menu.spec.ts` (2 tests).
+- **Efecto secundario real encontrado y corregido**: `e2e/superadmin.spec.ts`
+  asumía el dropdown viejo (`role="button"` dentro de la fila) — con
+  Radix el contenido está fuera de la fila (`document.body`) y los items
+  son `role="menuitem"`. Corregido para buscar el trigger en la fila y el
+  item en la página.
+- Acciones dependen de permisos reales del backend (`ver`/`editar`/
+  `activar`-`desactivar`) — ocultar una acción en frontend nunca sustituye
+  la autorización real (§7).
+
+**Formulario "Crear usuario"** — reflow completo, cerrado con evidencia real:
+
+- **Layout**: reflow a 2 secciones/2 columnas siguiendo
+  `03-user-form-expected.png` (`INFORMACIÓN PERSONAL` / `CREDENCIALES DE
+  ACCESO`), pero **solo con campos reales** — `Empresa`/`Cédula`/
+  `Teléfono`/`Ciudad`/`Dirección` de la imagen son `NOT_SUPPORTED` (§17.5,
+  ni en `CreateUserSchema` ni en `AppUser`) y **no se agregaron**; "Empresa"
+  en la imagen se resolvió reetiquetando el selector de Alcance/scope ya
+  real (Rol + Alcance en la misma fila cuando el rol es VIEWER, único caso
+  con un selector de alcance propio — SUPERADMIN/ADMIN_PORTAL/ADMIN_COMMERCE
+  lo derivan del rol).
+- **Contraseña provisional — `BACKEND_GAP` cerrado**: el admin ya no
+  escribe una contraseña. `CreateUserSchema` (`@repo/contracts`) perdió el
+  campo `password`; `UsersService.createWithRoleAssignment` genera una con
+  `randomBytes(18)` (CSPRNG, nunca `Math.random()`), la hashea con Argon2id
+  igual que antes, y la devuelve **una única vez** en la respuesta de
+  `POST /users` (`CreateUserResponseSchema`, campo `temporaryPassword`) —
+  nunca persistida en texto plano, nunca logueada, nunca en `newValue` del
+  audit event, nunca devuelta de nuevo por `GET /users`/`GET /users/:id`
+  (verificado con test real). El frontend la muestra exactamente una vez en
+  `CredentialReveal` (`UserForm.tsx`) — email + contraseña copiables, con
+  aviso de que no se volverá a mostrar — antes de cerrar el modal y
+  refrescar el listado.
+- **Users ↔ Better Auth atomicidad — documentado con test real**: ya era
+  transaccional (`dataSource.transaction`); se agregó
+  `users.service.spec.ts` → *"Better Auth identity and AppUser share the
+  same transaction..."* que fuerza un fallo en la inserción de Better Auth
+  y verifica que ni `AppUser` ni `role_assignment` ni el audit event se
+  guardan.
+- **Verificado real, extremo a extremo** (`e2e/create-user.spec.ts`, 2
+  tests, contra `apps/api` + PostgreSQL + Better Auth reales, no mocks):
+  SUPERADMIN crea un VIEWER → la respuesta real de `POST /users` trae
+  `temporaryPassword` → se muestra en la UI real → se cierra el modal → el
+  usuario nuevo aparece en el listado real → **login real con esa
+  contraseña exacta funciona** (segunda pestaña/contexto, sesión limpia) →
+  `GET /users/:id` real nunca vuelve a traer la contraseña.
+- Sin cambios de contrato en `UserSchema`/`GET /users` — solo
+  `CreateUserSchema` (quita `password`) y una respuesta nueva,
+  `CreateUserResponseSchema`, exclusiva de `POST /users`.
+
+### 17.2 Portals
+
+**Referencias**: `04-portal-form-current.png` (antes), `05-portal-form-expected-top.png`
+/ `06-portal-form-expected-bottom.png` (Claude Design, mismo form en dos
+posiciones de scroll).
+
+**Decisiones de negocio del usuario (bloqueadores reales resueltos, no
+inventados por la sesión)**:
+
+- **Nombre de visualización / Tipo de servicio / Descripción**: la imagen
+  los pide, pero ni `DOMAIN_GLOSSARY` ni el contrato confirman esos campos
+  como negocio real (el propio docblock de `CreatePortalSchema` decía
+  *"field list undecided"*). El usuario eligió **no implementarlos** — el
+  form real queda más corto que la imagen, a propósito, en vez de
+  inventar negocio no confirmado.
+- **Logotipo del portal**: cero módulos de upload/storage en `apps/api`
+  (verificado). El usuario eligió **diferir con estado honesto** — el form
+  no incluye upload de logo, ni siquiera decorativo. Mismo patrón que §9.3
+  ("Funcionalidades sin soporte backend").
+
+**Único campo real agregado — "Portal activo" (`MAPPING_REQUIRED` cerrado)**:
+
+- `status` ya existía en la entidad (`default: 'ACTIVE'`) y en
+  `PATCH /portals/:id/status`, pero no en la creación. `CreatePortalSchema`
+  ganó `status: EntityStatusSchema.optional()` — el toggle de
+  `06-portal-form-expected-bottom.png`, con `ACTIVE` como default real
+  (no solo visual) cuando se omite.
+- **Guardrail real agregado**: `UpdatePortalSchema` (`PATCH /portals/:id`,
+  edición simple) **excluye `status` explícitamente**
+  (`CreatePortalSchema.omit({ status: true })`) — solo
+  `PATCH /portals/:id/status` puede cambiarlo, porque es el único que
+  audita `PORTAL_ACTIVATED`/`PORTAL_DEACTIVATED`
+  (`PortalsService.updateStatus`). Sin este guardrail, agregar `status` a
+  `CreatePortalSchema` y derivar `UpdatePortalSchema` de él con `.partial()`
+  (como estaba antes) habría dejado que una edición cualquiera cambiara el
+  estado del portal sin pasar por el endpoint auditado — se verificó con
+  un test real (`portals.e2e-spec.ts`) que un `PATCH /portals/:id` con
+  `status` en el body no cambia nada.
+- Toggle propio, accesible (`role="switch"`, `aria-checked`), no el patrón
+  decorativo del switch de modo oscuro del Sidebar — solo aparece en modo
+  creación (edición nunca envía `status`).
+- **Verificado real** (`apps/api/test/portals.e2e-spec.ts`, 4 tests +
+  `apps/dashboard-web/e2e/create-portal.spec.ts`, 2 tests, contra
+  PostgreSQL real): crear sin `status` → `ACTIVE`; crear con
+  `status: 'INACTIVE'` → `INACTIVE` real; `PATCH` simple con `status` en
+  el body → ignorado, el estado no cambia; `PATCH .../status` → sí cambia.
+  El toggle real de la UI, no solo la API: apagarlo produce un portal
+  `INACTIVE` real en Postgres.
+
+### 17.3 Allies / Commerce
+
+**Referencias**: `07-ally-form-expected-top.png` / `08-ally-form-expected-bottom.png`
+(Claude Design, mismo form en dos posiciones de scroll).
+
+Slice puramente visual — todos los campos del form ya existían en
+`CreateCommerceSchema` (`EXISTS`, §17.5), **cero cambios de backend/
+contrato**:
+
+- **Reordenado** (`CommerceForm.tsx`) para seguir el orden de la imagen:
+  `INFORMACIÓN GENERAL` → Nombre del establecimiento, Tipo de
+  establecimiento (`categoryId`), NIT o Identificación; `INFORMACIÓN DE
+  CONTACTO` → Email, Teléfono, Ciudad, Dirección. `legalName`
+  ("Razón social") y `contactName` ("Nombre de contacto") — reales,
+  requeridos por el backend, ausentes en la imagen (`EXISTS, imagen
+  incompleta`, §17.5) — se mantienen, al final de su sección respectiva,
+  en vez de eliminarse.
+- **Relabeled** para acercarse al texto exacto de la imagen (sin tocar el
+  modelo de datos): `categoryLabel` "Categoría" → "Tipo de
+  establecimiento"; `taxIdLabel` "NIT" → "NIT o Identificación";
+  `tradeNameLabel` "Nombre comercial" → "Nombre del establecimiento". La
+  imagen sigue mapeando sobre el mismo `categoryId` real
+  (`GET /portals/:portalId/categories`), no un campo de texto libre nuevo.
+- **`Dirección` se mantiene requerida**, aunque la imagen la marca
+  "(opcional)" — `address` es `NOT NULL` en el backend real; por la
+  jerarquía de autoridad de este documento (backend > imagen), la imagen
+  es la que está mal etiquetada, no el formulario.
+- **Verificado real** (`e2e/create-ally.spec.ts`, contra PostgreSQL real):
+  el formulario reordenado sigue creando un comercio real dentro de su
+  portal — prueba que el reorden no rompió el wiring de ningún campo, no
+  que se haya encontrado un bug.
+
+### 17.4 Transaction Alerts
+
+**Referencia**: `09-transaction-alerts-expected.png` (Claude Design).
+
+`AlertsCard` ya derivaba de transacciones reales (las 3 más recientes en
+scope, sin datos inventados) — el `BACKEND_GAP` real era la persistencia
+de leído/no-leído: "Marcar todas como leídas" no tenía `onClick`.
+
+- **Modelo adaptado, no copiado ciegamente**: el prompt maestro sugería una
+  tabla `Notification` completa (`audience`/`type`/`title`/`message`/...).
+  En vez de eso, `transaction_alert_reads` (nueva, mínima): `(id, user_id,
+  transaction_id, read_at)`, `UNIQUE(user_id, transaction_id)`, ambas FK
+  `ON DELETE CASCADE`. El contenido mostrable de cada alerta sigue
+  derivándose 100% en vivo de su `Transaction` real (igual que antes de
+  esta tabla existir, `toTxAlert`) — solo si el usuario actual ya la vio
+  necesitaba persistirse. Ausencia de fila = no leída.
+- **`GET /transactions/alerts`** (`TransactionsController`, declarado
+  antes de `:id` — si no, Nest interpretaría "alerts" como el param `:id`
+  y fallaría con 400 en vez de 404/200 real): mismas transacciones
+  scope-filtradas que `GET /transactions` (reutiliza `findAll`), cada una
+  anotada con `isRead` real para el actor actual
+  (`TransactionAlertSchema = TransactionSchema.extend({isRead})`).
+- **`POST /transactions/alerts/read-all`**: recibe `transactionIds` del
+  cliente (las alertas que tiene renderizadas), pero **nunca confía en
+  ellos a ciegas** — se intersectan contra el scope real del actor
+  (recalculado server-side, mismo `findAll`) antes de escribir nada; un id
+  fuera de scope se descarta en silencio, nunca se registra (OWASP API1,
+  verificado con test real). Idempotente (`upsert` con
+  `ON CONFLICT DO NOTHING` sobre `(user_id, transaction_id)`).
+- **Sin realtime**: ni WebSocket ni SSE ni polling — refetch normal de
+  Next.js (Server Component) en cada navegación/refresh, como el resto de
+  la app. No se justificó necesidad de más.
+- **Frontend**: `AlertsCard.tsx` pasó a Client Component (necesita
+  `onClick` real); `lib/transactions.ts` gana `TransactionAlertView`/
+  `toTransactionAlertView`/`recentTransactionAlertViews` (mismo patrón que
+  `TxAlert`/`toTxAlert`/`recentTxAlerts`, que se dejan intactos — los sigue
+  usando la actividad reciente de Aliado detail, una superficie distinta
+  sin este `BACKEND_GAP`). El badge "Nueva" por-alerta y el contador del
+  header ("N nuevas") ahora reflejan `isRead` real, no todas las alertas
+  incondicionalmente.
+- **Bug real encontrado y corregido durante esta pasada**: la primera
+  versión de `TransactionAlertReadEntity` compilaba y pasaba lint, pero
+  fallaba en runtime con `EntityMetadataNotFoundError: No metadata for
+  "TransactionAlertReadEntity" was found` — faltaba registrarla en
+  `src/config/entities.ts` (la lista única que alimenta tanto
+  `database.module.ts` como `data-source.ts`, docs/adr/010); estar en el
+  `TypeOrmModule.forFeature` del módulo no basta. Encontrado por el propio
+  test de integración nuevo, corregido, verificado.
+- **Migración hecha a mano, no con el output crudo de `migration:generate`**:
+  el generador diffó una baja no relacionada (`DROP CONSTRAINT` sobre el FK
+  real y preexistente de `users` hacia `"user"` de Better Auth) — mismo
+  patrón de "editar a mano tras generar" ya documentado en
+  `AddTransactions1788150347573`. La migración final (`AddTransactionAlertReads`)
+  solo crea `transaction_alert_reads`; verificada `up`/`down`/`up` contra
+  Postgres real, con el FK de `users` intacto confirmado por consulta
+  directa antes y después.
+- **Verificado real**: `apps/api/test/transactions.e2e-spec.ts` (6 tests
+  nuevos) — scope-filtrado igual que `GET /transactions`, marca-y-persiste
+  entre requests, idempotente, id fuera de scope descartado (BOLA), estado
+  por-usuario (dos VIEWERs distintos no comparten leído/no-leído).
+  `apps/api/src/modules/transactions/transactions.service.spec.ts` (4
+  tests nuevos, unitarios). `e2e/transaction-alerts.spec.ts` (2 tests,
+  frontend real): un VIEWER recién creado ve el badge "Nueva" real, marca
+  todas como leídas real (`POST` real capturado), el badge desaparece, y
+  **persiste tras un `reload()` real** (no solo estado de React); un
+  ADMIN_PORTAL(Avanza) fresco solo ve alertas de su propio portal
+  (`page.request` contra el endpoint real, mismo patrón que
+  `create-user.spec.ts`).
+
+### 17.5 Matriz de auditoría completa (las 4 áreas)
+
+Auditoría real (frontend + backend + `@repo/contracts` + docs de negocio)
+hecha antes de tocar código, siguiendo la jerarquía de autoridad de este
+documento — el backend/modelo de negocio manda sobre la imagen "expected"
+cuando entran en conflicto:
+
+| Área / Problema | Estado actual | Esperado (imagen) | Backend actual | Clasificación | Decisión |
+|---|---|---|---|---|---|
+| Users: menú ⋮ acciones | Recortado en la última fila (`overflow-hidden`) | Siempre visible, teclado, focus-return | N/A (solo UI) | `FUNCTIONAL_BUG` | **Corregido** — ver §17.1 |
+| Users: campos personales (Empresa/Cédula/Teléfono/Ciudad/Dirección) | Solo Nombre, Email, Contraseña, Rol, Alcance | 8 campos en 2 columnas | `CreateUserSchema = {email, password, fullName, role, scopePortalId?, scopeCommerceId?}` — sin cédula/teléfono/ciudad/dirección en ningún lado (`AppUser` tampoco) | `NOT_SUPPORTED` (Cédula/Teléfono/Ciudad/Dirección) · `ADAPT` (Empresa = el selector de Alcance ya real) | **Hecho** — reflow a 2 columnas solo con campos reales, ver §17.1 |
+| Users: contraseña provisional | Admin la escribe a mano | "Se generarán credenciales automáticamente" | `CreateUserSchema.password` requerido (mín. 12) — sin endpoint de auto-generación | `BACKEND_GAP` | **Hecho** — generada server-side, devuelta una vez en `POST /users`, input quitado, ver §17.1 |
+| Users ↔ Better Auth atomicidad | Ya transaccional (`dataSource.transaction`) | — | — | `KEEP` | **Hecho** — test real que fuerza el fallo y verifica que nada se guarda, ver §17.1 |
+| Portal: Nombre del portal | Único campo | Campo 1 de 6 | `CreatePortalSchema = { name }` | `EXISTS` | Mantener |
+| Portal: Nombre de visualización / Tipo de servicio / Descripción | No existen | Campos 2, 3, 4 | Docblock del contrato: *"field list undecided"*; sin mención en `DOMAIN_GLOSSARY` | `BACKEND_GAP` sin decisión de negocio confirmada | **Decisión del usuario**: no implementar — el form se queda más corto que la imagen a propósito, sin inventar negocio |
+| Portal: Logotipo | No existe | Upload drag&drop | Cero módulos de imágenes/upload/storage en `apps/api` | `BACKEND_GAP` — infraestructura nueva | **Decisión del usuario**: diferir con estado honesto (mismo patrón que §9.3), sin construir storage ahora |
+| Portal: Portal activo | No existe en creación | Toggle | `status` ya existe en la entidad y en `PATCH /portals/:id/status`; falta en `CreatePortalSchema` | `MAPPING_REQUIRED` | **Hecho** — `status` opcional en `CreatePortalSchema`, excluido de `UpdatePortalSchema` (guardrail de auditoría), ver §17.2 |
+| Ally: Nombre/Tipo/NIT/Email/Teléfono/Ciudad | Ya existen (`tradeName`, `categoryId`, `taxId`, `contactEmail`, `contactPhone`, `city`) | Igual | `CreateCommerceSchema` los tiene todos | `EXISTS` | **Hecho** — reordenado a 2 secciones visuales, sin tocar backend, ver §17.3 |
+| Ally: Dirección | Requerida (`NOT NULL`) | Marcada "(opcional)" en la imagen | `address varchar NOT NULL` | Discrepancia visual, no `BACKEND_GAP` | El backend manda: se mantiene requerida; la imagen se equivoca en esa etiqueta |
+| Ally: Razón social / Nombre de contacto | Ya requeridos, no aparecen en la imagen | — | `legalName`, `contactName NOT NULL` | `EXISTS`, imagen incompleta | Se mantienen (el backend manda sobre la imagen) |
+| Ally ↔ Portal / scope | Ya verificado con 403 real (`rbac.spec.ts`) | — | `ScopeAuthorizationService` | `KEEP` | Ninguna |
+| Duplicados (email, taxId, nombre de portal) | `ConflictException` real por unique constraints | — | `UNIQUE(email)`, `UNIQUE(taxId)`, `UNIQUE(portal.name)` | `KEEP` (backend) | Frontend debe traducir el 409 a mensaje UX — **pendiente** |
+| Alertas de transacciones | `AlertsCard` ya deriva de transacciones reales (3 más recientes); "Marcar todas como leídas" es decorativo (sin `onClick`) | Igual visualmente, con persistencia real de leído/no-leído | No existía tabla de lectura en las 18 tablas reales de Postgres | `BACKEND_GAP` (persistencia leído/no-leído) | **Hecho** — `transaction_alert_reads` (mínima, no un `Notification` completo), ver §17.4 |
+
+## 18. Historial de este documento
+
+- **2026-09-02 (corrección funcional/visual — Slice 5: alertas de
+  transacciones + cierre de los 5 slices)** — Última pasada de
+  "CORRECCIÓN FUNCIONAL Y VISUAL — USUARIOS + PORTALES + ALIADOS +
+  ALERTAS": `BACKEND_GAP` de persistencia leído/no-leído cerrado con
+  `transaction_alert_reads` (modelo mínimo, no un `Notification`
+  completo — ver §17.4). Bug real encontrado y corregido en el camino:
+  la entidad nueva faltaba en `src/config/entities.ts`
+  (`EntityMetadataNotFoundError` en runtime, código que compilaba y
+  pasaba lint igual). Con esto, **los 5 slices del prompt quedan
+  cerrados**: Slice 1 (menú ⋮), Slice 2 (crear usuario + credencial
+  provisional), Slice 3 (crear portal + activo), Slice 4 (crear aliado,
+  visual), Slice 5 (alertas). Los 2 bloqueadores de negocio (campos de
+  Portal, logo de Portal) siguen sin implementar por decisión explícita
+  del usuario — documentado, no un pendiente técnico.
+  Verificado: `@repo/contracts` 56/56, `api` unit 46/46,
+  `test:integration` 78/78, `test:auth-cutover-rehearsal` 12/12, `api`
+  build limpio; `dashboard-web` unit 42/42, `e2e/*.spec.ts` 18/18,
+  `visual.spec.ts` 21/21 (3 viewports, sin regresión — Transacciones no
+  cambió visualmente pese al `AlertsCard` ahora interactivo), `build`
+  limpio. **Nota honesta sobre el rate limiter real**: con la suite ya en
+  18 tests reales (cada uno con 1-3 logins reales), correrla completa con
+  alta concurrencia (8 workers) dispara el `ThrottlerGuard` real
+  (100 req/60s) de forma reproducible — no es un bug de esta pasada, es
+  el mismo control de seguridad ya documentado en §11.5 para
+  `visual.spec.ts`, ahora también visible en la suite regular por su
+  tamaño. Cada test — y grupos de hasta 9 tests — se verificó en verde de
+  forma aislada/secuencial (`--workers=1`, con una ventana del limiter de
+  por medio); no se relajó el limiter ni se debilitó ningún control real
+  para hacer pasar nada.
+
+- **2026-09-02 (corrección funcional/visual — Slice 4: crear aliado)** —
+  Cuarta pasada, la más pequeña: puramente visual. Todos los campos de
+  "Crear aliado" ya existían en `CreateCommerceSchema` (`EXISTS`) —
+  reordenados/reetiquetados en `CommerceForm.tsx` para seguir
+  `07-ally-form-expected-top.png`/`08-ally-form-expected-bottom.png`, cero
+  cambios de backend/contrato (§17.3). `Dirección` se mantiene requerida a
+  propósito (la imagen la marca "(opcional)", pero el backend manda:
+  `address NOT NULL`). Verificado: `dashboard-web` typecheck/lint limpios,
+  `e2e/create-ally.spec.ts` nuevo (1/1) contra PostgreSQL real — prueba que
+  el reorden no rompió el wiring de ningún campo.
+
+- **2026-09-02 (corrección funcional/visual — Slice 3: crear portal)** —
+  Tercera pasada: único gap real de "Crear portal" cerrado —
+  `CreatePortalSchema.status` opcional (default `ACTIVE`), toggle "Portal
+  activo" real y accesible en la UI (§17.2). Los otros 3 campos que pide
+  la imagen (nombre de visualización/tipo de servicio/descripción) y el
+  logo quedan sin implementar por decisión explícita del usuario — no son
+  bugs, son alcance de negocio no confirmado. Guardrail real agregado:
+  `UpdatePortalSchema` excluye `status` a propósito, para que una edición
+  simple no pueda cambiar el estado sin pasar por el endpoint auditado —
+  verificado con test real (`portals.e2e-spec.ts`). Verificado:
+  `@repo/contracts` 56/56, `api` typecheck/lint limpios,
+  `test:integration` 73/73 (69 + 4 nuevos), `dashboard-web`
+  typecheck/lint limpios, `e2e/create-portal.spec.ts` nuevo (2/2) +
+  `e2e/superadmin.spec.ts` reverificado limpio tras una falsa alarma por
+  el mismo `ThrottlerException` real ya documentado en el Slice 2 (no una
+  regresión — confirmado repitiendo tras la ventana del limiter).
+
+- **2026-09-02 (corrección funcional/visual — Slice 2: crear usuario)** —
+  Segunda pasada de la misma corrección: form "Crear usuario" reflowed a 2
+  columnas/2 secciones con campos reales únicamente (§17.1), y el
+  `BACKEND_GAP` de contraseña provisional cerrado de extremo a extremo —
+  `CreateUserSchema` pierde `password`, `CreateUserResponseSchema` nuevo
+  (`temporaryPassword`, exclusivo de `POST /users`), generación con
+  `randomBytes` (CSPRNG). 5 archivos de test de backend actualizados
+  (`users.service.spec.ts` + 4 `*.e2e-spec.ts` que creaban un usuario y
+  luego iniciaban sesión con una contraseña fija) para leer
+  `temporaryPassword` de la respuesta real en vez de un literal.
+  `e2e/create-user.spec.ts` nuevo (2 tests) prueba la cadena completa real:
+  API → UI → login real con la contraseña mostrada → `GET` nunca la repite.
+  Verificado: `@repo/contracts` 53/53, `api` unit 42/42, `api`
+  `test:integration` 69/69, `test:auth-cutover-rehearsal` 12/12, `api`
+  build limpio; `dashboard-web` unit 40/40, `e2e/*.spec.ts` 13/13,
+  `visual.spec.ts` 21/21 (3 viewports, sin regresión visual — el form no
+  se captura en ninguna baseline), `build` limpio. (Una corrida de
+  `visual.spec.ts` a mitad de esta pasada mostró 9 fallos falsos por un
+  `ThrottlerException` real del rate limiter, producto de correr muchas
+  suites E2E seguidas contra el mismo backend en la misma sesión — no una
+  regresión de código; confirmado repitiendo la suite tras la ventana del
+  limiter.)
+
+- **2026-09-02 (corrección funcional/visual — Slice 1: menú de acciones)** —
+  Primera pasada de "CORRECCIÓN FUNCIONAL Y VISUAL — USUARIOS + PORTALES +
+  ALIADOS + ALERTAS": auditoría completa de las 4 áreas contra el backend
+  real (§17.5), 2 decisiones de negocio confirmadas por el usuario (campos
+  de Portal, logo de Portal — ambas "no implementar todavía", ver §17.5).
+  Slice 1 (menú ⋮) cerrado con evidencia real: bug de clipping corregido
+  (`RowActionsMenu.tsx` sobre Radix, §17.1), `e2e/superadmin.spec.ts`
+  actualizado (rompía con el nuevo dropdown portaleado — buscaba el item
+  dentro de la fila), `e2e/row-actions-menu.spec.ts` nuevo (2 tests).
+  Verificado: `e2e/*.spec.ts` 11/11 y `visual.spec.ts`
+  21/21 (chromium + 3 viewports) contra `apps/api` + PostgreSQL reales.
+  Slices 2-5 (Crear Usuario, Crear Portal, Crear Aliado, Alertas) quedan
+  auditados (§17.5) pero sin implementar — siguiente paso de esta misma
+  pasada.
 
 - **2026-09-02 (visual regression + SUPERADMIN E2E)** — Cerrados los dos
   pendientes P1 dejados por el cierre técnico anterior (§16): (1)
