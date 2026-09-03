@@ -95,7 +95,6 @@ describe('UsersService', () => {
     const now = new Date('2026-01-01T00:00:00.000Z');
     const input = {
       email: 'ana@example.com',
-      password: 'a-strong-password-123',
       fullName: 'Ana Pérez',
       role: 'ADMIN_PORTAL' as const,
       scopePortalId: 'portal-a',
@@ -126,6 +125,10 @@ describe('UsersService', () => {
       });
       expect(user).toMatchObject({ email: input.email, role: 'ADMIN_PORTAL', scopePortalId: 'portal-a' });
       expect(user).not.toHaveProperty('passwordHash');
+      expect(user).not.toHaveProperty('password');
+      // Server-generated, never Math.random(), returned exactly once (§17.1).
+      expect(typeof user.temporaryPassword).toBe('string');
+      expect(user.temporaryPassword.length).toBeGreaterThanOrEqual(12);
       expect(auditService.record).toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({ action: 'USER_CREATED', targetType: 'USER', targetId: 'user-1' }),
@@ -136,6 +139,61 @@ describe('UsersService', () => {
       (usersRepository.findOneBy as jest.Mock).mockResolvedValue({ id: 'existing' });
 
       await expect(service.createWithRoleAssignment(SUPERADMIN, input)).rejects.toThrow(ConflictException);
+    });
+
+    it('generates a different temporaryPassword on every call — not a fixed/deterministic value', async () => {
+      (usersRepository.findOneBy as jest.Mock).mockResolvedValue(null);
+      (usersRepository.save as jest.Mock).mockImplementation((u: Partial<UserEntity>) => ({
+        ...u,
+        createdAt: now,
+      }));
+      (roleAssignmentsRepository.save as jest.Mock).mockResolvedValue({
+        role: 'ADMIN_PORTAL',
+        scopeType: 'PORTAL',
+        scopePortalId: 'portal-a',
+        scopeCommerceId: null,
+      });
+
+      const first = await service.createWithRoleAssignment(SUPERADMIN, { ...input, email: 'first@example.com' });
+      const second = await service.createWithRoleAssignment(SUPERADMIN, { ...input, email: 'second@example.com' });
+
+      expect(first.temporaryPassword).not.toBe(second.temporaryPassword);
+    });
+
+    it('Better Auth identity and AppUser share the same transaction — a Better Auth failure prevents the AppUser from ever being saved (docs/adr/013 "Contraseñas")', async () => {
+      (usersRepository.findOneBy as jest.Mock).mockResolvedValue(null);
+      const mockManager = {
+        getRepository: jest.fn((entity: unknown) => {
+          if (entity === UserEntity) return usersRepository;
+          if (entity === RoleAssignmentEntity) return roleAssignmentsRepository;
+          return createMockRepository();
+        }),
+        // Simulates createBetterAuthIdentity's raw INSERT failing (e.g. a
+        // real unique-constraint violation on Better Auth's own `user`
+        // table) — the whole transaction callback must reject before the
+        // `AppUser`/role_assignment save calls below it ever run.
+        query: jest.fn().mockRejectedValue(new Error('duplicate key value violates unique constraint')),
+      };
+      const failingDataSource = { transaction: jest.fn((cb: (manager: unknown) => unknown) => cb(mockManager)) };
+      const moduleWithFailingTx: TestingModule = await Test.createTestingModule({
+        providers: [
+          UsersService,
+          { provide: getRepositoryToken(UserEntity), useValue: usersRepository },
+          { provide: getRepositoryToken(RoleAssignmentEntity), useValue: roleAssignmentsRepository },
+          { provide: getRepositoryToken(CommerceEntity), useValue: commercesRepository },
+          { provide: getDataSourceToken(), useValue: failingDataSource },
+          { provide: ScopeAuthorizationService, useValue: scopeAuthorization },
+          { provide: AuditService, useValue: auditService },
+        ],
+      }).compile();
+      const serviceWithFailingTx = moduleWithFailingTx.get(UsersService);
+
+      await expect(serviceWithFailingTx.createWithRoleAssignment(SUPERADMIN, input)).rejects.toThrow(
+        'duplicate key value violates unique constraint',
+      );
+      expect(usersRepository.save).not.toHaveBeenCalled();
+      expect(roleAssignmentsRepository.save).not.toHaveBeenCalled();
+      expect(auditService.record).not.toHaveBeenCalled();
     });
 
     it('propagates ForbiddenException from ScopeAuthorizationService (e.g. cross-portal escalation)', async () => {

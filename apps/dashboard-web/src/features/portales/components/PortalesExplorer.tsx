@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 
 import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
-import { DotsVerticalIcon, PlusIcon, SearchIcon } from '../../../components/ui/icons';
+import { PlusIcon, SearchIcon } from '../../../components/ui/icons';
+import { RowActionsMenu } from '../../../components/ui/RowActionsMenu';
 import { StatCardTile } from '../../../components/ui/StatCardTile';
 import { ToastViewport } from '../../../components/ui/ToastViewport';
 import { useConfirm } from '../../../components/ui/use-confirm';
@@ -23,7 +24,6 @@ export function PortalesExplorer({ headerStats, rows }: { headerStats: HeaderSta
   const { confirm, ask, close: closeConfirm, confirmAction } = useConfirm();
   const [search, setSearch] = useState('');
   const [formTarget, setFormTarget] = useState<PortalFormTarget | 'create' | null>(null);
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   const filteredRows = useMemo(
     () => rows.filter((r) => r.name.toLowerCase().includes(search.toLowerCase())),
@@ -55,7 +55,6 @@ export function PortalesExplorer({ headerStats, rows }: { headerStats: HeaderSta
       enabling ? portalesPage.menu.enable : portalesPage.menu.disable,
       () => void doToggleActive(row.id, enabling),
     );
-    setOpenMenuId(null);
   }
 
   return (
@@ -119,44 +118,23 @@ export function PortalesExplorer({ headerStats, rows }: { headerStats: HeaderSta
                   {row.estadoLabel}
                 </span>
               </div>
-              <div className="relative">
-                <button
-                  type="button"
-                  title={portalesPage.columns.acciones}
-                  onClick={() => setOpenMenuId((id) => (id === row.id ? null : row.id))}
-                  className="flex h-8 w-8 items-center justify-center rounded-control-sm border border-(--color-border) text-(--color-fg-soft) hover:bg-(--color-surface-subtle)"
-                >
-                  <DotsVerticalIcon />
-                </button>
-                {openMenuId === row.id ? (
-                  <div className="absolute right-0 top-9 z-30 w-[150px] overflow-hidden rounded-control border border-(--color-border) bg-(--color-surface) shadow-dropdown">
-                    <Link
-                      href={`/portales/${row.id}`}
-                      onClick={() => setOpenMenuId(null)}
-                      className="block px-3.5 py-2.5 text-[13px] font-semibold text-(--color-fg) hover:bg-(--color-surface-subtle)"
-                    >
-                      {portalesPage.menu.view}
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setFormTarget({ id: row.id, name: row.name });
-                        setOpenMenuId(null);
-                      }}
-                      className="block w-full px-3.5 py-2.5 text-left text-[13px] font-semibold text-(--color-fg) hover:bg-(--color-surface-subtle)"
-                    >
-                      {portalesPage.menu.edit}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => toggleActive(row)}
-                      className="block w-full px-3.5 py-2.5 text-left text-[13px] font-semibold text-(--color-orange) hover:bg-(--color-surface-subtle)"
-                    >
-                      {row.estadoTone === 'success' ? portalesPage.menu.disable : portalesPage.menu.enable}
-                    </button>
-                  </div>
-                ) : null}
-              </div>
+              <RowActionsMenu
+                label={portalesPage.columns.acciones}
+                actions={[
+                  { key: 'view', label: portalesPage.menu.view, href: `/portales/${row.id}` },
+                  {
+                    key: 'edit',
+                    label: portalesPage.menu.edit,
+                    onSelect: () => setFormTarget({ id: row.id, name: row.name }),
+                  },
+                  {
+                    key: 'toggle',
+                    label: row.estadoTone === 'success' ? portalesPage.menu.disable : portalesPage.menu.enable,
+                    tone: 'warning',
+                    onSelect: () => toggleActive(row),
+                  },
+                ]}
+              />
             </div>
           ))
         )}

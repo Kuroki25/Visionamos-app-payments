@@ -6,7 +6,8 @@ import { useMemo, useState } from 'react';
 import type { Commerce, Portal, Role } from '@repo/contracts';
 
 import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
-import { DotsVerticalIcon, PlusIcon, SearchIcon } from '../../../components/ui/icons';
+import { PlusIcon, SearchIcon } from '../../../components/ui/icons';
+import { RowActionsMenu } from '../../../components/ui/RowActionsMenu';
 import { ToastViewport } from '../../../components/ui/ToastViewport';
 import { useConfirm } from '../../../components/ui/use-confirm';
 import { useToasts } from '../../../components/ui/use-toasts';
@@ -39,7 +40,6 @@ export function UsersExplorer({
   const [roleFilter, setRoleFilter] = useState<Role | 'ALL'>('ALL');
   const [formTarget, setFormTarget] = useState<UserFormTarget>(null);
   const [viewedUser, setViewedUser] = useState<UserRow | null>(null);
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   const filteredRows = useMemo(() => {
     const q = search.toLowerCase();
@@ -75,7 +75,6 @@ export function UsersExplorer({
       enabling ? usuariosPage.menu.enable : usuariosPage.menu.disable,
       () => void doToggleActive(row, enabling),
     );
-    setOpenMenuId(null);
   }
 
   return (
@@ -161,53 +160,36 @@ export function UsersExplorer({
                   {row.roleLabel}
                 </span>
               </div>
-              <div className="relative">
-                <button
-                  type="button"
-                  title={usuariosPage.columns.acciones}
-                  onClick={() => setOpenMenuId((id) => (id === row.id ? null : row.id))}
-                  className="flex h-8 w-8 items-center justify-center rounded-control-sm border border-(--color-border) text-(--color-fg-soft) hover:bg-(--color-surface-subtle)"
-                >
-                  <DotsVerticalIcon />
-                </button>
-                {openMenuId === row.id ? (
-                  <div className="absolute right-0 top-9 z-30 w-[150px] overflow-hidden rounded-control border border-(--color-border) bg-(--color-surface) shadow-dropdown">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setViewedUser(row);
-                        setOpenMenuId(null);
-                      }}
-                      className="block w-full px-3.5 py-2.5 text-left text-[13px] font-semibold text-(--color-fg) hover:bg-(--color-surface-subtle)"
-                    >
-                      {usuariosPage.menu.view}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setFormTarget({ id: row.id, fullName: row.fullName });
-                        setOpenMenuId(null);
-                      }}
-                      className="block w-full px-3.5 py-2.5 text-left text-[13px] font-semibold text-(--color-fg) hover:bg-(--color-surface-subtle)"
-                    >
-                      {usuariosPage.menu.edit}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => toggleActive(row)}
-                      className="block w-full px-3.5 py-2.5 text-left text-[13px] font-semibold text-(--color-orange) hover:bg-(--color-surface-subtle)"
-                    >
-                      {row.estadoTone === 'success' ? usuariosPage.menu.disable : usuariosPage.menu.enable}
-                    </button>
-                  </div>
-                ) : null}
-              </div>
+              <RowActionsMenu
+                label={usuariosPage.columns.acciones}
+                actions={[
+                  { key: 'view', label: usuariosPage.menu.view, onSelect: () => setViewedUser(row) },
+                  {
+                    key: 'edit',
+                    label: usuariosPage.menu.edit,
+                    onSelect: () => setFormTarget({ id: row.id, fullName: row.fullName }),
+                  },
+                  {
+                    key: 'toggle',
+                    label: row.estadoTone === 'success' ? usuariosPage.menu.disable : usuariosPage.menu.enable,
+                    tone: 'warning',
+                    onSelect: () => toggleActive(row),
+                  },
+                ]}
+              />
             </div>
           ))
         )}
       </div>
 
-      <UserForm target={formTarget} portals={portals} commerces={commerces} onClose={() => setFormTarget(null)} onSaved={handleSaved} />
+      <UserForm
+        target={formTarget}
+        portals={portals}
+        commerces={commerces}
+        onClose={() => setFormTarget(null)}
+        onCreated={() => router.refresh()}
+        onSaved={handleSaved}
+      />
       <UserViewModal user={viewedUser} onClose={() => setViewedUser(null)} />
       <ConfirmDialog confirm={confirm} onClose={closeConfirm} onConfirm={confirmAction} />
       <ToastViewport toasts={toasts} />

@@ -7,7 +7,7 @@ import { VISUAL_AUTH_FILE } from './visual-auth-file';
  * VISUAL regression — NOT REAL E2E evidence (see
  * `docs/frontend/DASHBOARD_SOURCE_OF_TRUTH.md` §11.1, which keeps the two
  * categories separate on purpose). Baselines capture the screens Claude
- * Design already approved (§9 "Visual Contract", §17 "Historial") as they
+ * Design already approved (§9 "Visual Contract", §18 "Historial") as they
  * render today — a diff here means "something changed since the design
  * was approved", to be triaged (regression vs. intentional change), never
  * auto-accepted with `--update-snapshots`.

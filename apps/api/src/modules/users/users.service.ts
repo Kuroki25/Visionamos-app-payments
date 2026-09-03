@@ -1,8 +1,8 @@
 import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
-import type { CreateUser, ScopeType, UpdateUser, User } from '@repo/contracts';
+import type { CreateUser, CreateUserResponse, ScopeType, UpdateUser, User } from '@repo/contracts';
 import * as argon2 from 'argon2';
-import { randomUUID } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import type { DataSource, Repository } from 'typeorm';
 
 import type { AuthenticatedRequestUser } from '../auth/types/authenticated-request-user.type';
@@ -25,6 +25,18 @@ function toUser(user: UserEntity, assignment: RoleAssignmentEntity): User {
     status: user.status,
     createdAt: user.createdAt.toISOString(),
   };
+}
+
+/**
+ * A cryptographically random provisional password for a newly created
+ * user (docs/frontend/DASHBOARD_SOURCE_OF_TRUTH.md §17.1 — "Se generarán
+ * credenciales provisionales automáticamente"). `randomBytes` from
+ * `node:crypto` (CSPRNG), never `Math.random()`. Base64url keeps every
+ * character safe to display/copy as-is; 18 bytes → 24 chars, comfortably
+ * inside `PasswordSchema`'s 12-128 bound.
+ */
+function generateTemporaryPassword(): string {
+  return randomBytes(18).toString('base64url');
 }
 
 /** SUPERADMIN → GLOBAL, ADMIN_PORTAL → PORTAL, ADMIN_COMMERCE → COMMERCE. VIEWER derives from whichever scope id is present (docs/adr/011 §4). */
@@ -64,8 +76,14 @@ export class UsersService {
    * `POST /users` (docs/adr/006/011 — replaces the removed public
    * `POST /auth/register`). Transactional: user + role assignment + audit
    * event all succeed together or not at all.
+   *
+   * The caller never chooses the new user's password — a provisional one
+   * is generated here and returned exactly once in the response
+   * (`temporaryPassword`). Never persisted in plaintext (only its Argon2id
+   * hash goes to Better Auth's `account.password`), never logged, never
+   * audited (`newValue` below omits it), never returned again by any GET.
    */
-  async createWithRoleAssignment(actor: AuthenticatedRequestUser, input: CreateUser): Promise<User> {
+  async createWithRoleAssignment(actor: AuthenticatedRequestUser, input: CreateUser): Promise<CreateUserResponse> {
     const scopeType = deriveScopeType(input);
     await this.scopeAuthorization.assertCanAssignRole(actor, {
       role: input.role,
@@ -78,7 +96,8 @@ export class UsersService {
       throw new ConflictException('A user with this email already exists.');
     }
 
-    const passwordHash = await argon2.hash(input.password);
+    const temporaryPassword = generateTemporaryPassword();
+    const passwordHash = await argon2.hash(temporaryPassword);
     // Generated here, not left to the database, because Better Auth's
     // `user` row (created first, below) must exist before `users.id` can
     // reference it — `users.id` is a plain FK column since the cutover
@@ -126,7 +145,7 @@ export class UsersService {
         newValue: { email: user.email, role: assignment.role, scopeType },
       });
 
-      return toUser(user, assignment);
+      return { ...toUser(user, assignment), temporaryPassword };
     });
   }
 

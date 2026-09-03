@@ -38,7 +38,15 @@ export class PortalsService {
   ) {}
 
   async create(input: CreatePortal): Promise<Portal> {
-    const saved = await this.portalsRepository.save(this.portalsRepository.create(input));
+    // `exactOptionalPropertyTypes` rejects `status: undefined` explicitly —
+    // the key must be entirely absent (not just optional) for TypeORM's
+    // `DeepPartial` to fall through to the column's own `ACTIVE` default.
+    const saved = await this.portalsRepository.save(
+      this.portalsRepository.create({
+        name: input.name,
+        ...(input.status !== undefined ? { status: input.status } : {}),
+      }),
+    );
     return toPortal(saved);
   }
 

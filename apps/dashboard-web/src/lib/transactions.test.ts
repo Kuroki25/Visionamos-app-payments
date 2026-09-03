@@ -1,7 +1,15 @@
-import type { Transaction } from '@repo/contracts';
+import type { Transaction, TransactionAlert } from '@repo/contracts';
 import { describe, expect, it } from 'vitest';
 
-import { recentTxAlerts, recentTxRows, sortByRecent, toTxAlert, toTxRow } from './transactions';
+import {
+  recentTransactionAlertViews,
+  recentTxAlerts,
+  recentTxRows,
+  sortByRecent,
+  toTransactionAlertView,
+  toTxAlert,
+  toTxRow,
+} from './transactions';
 
 function tx(overrides: Partial<Transaction>): Transaction {
   return {
@@ -89,6 +97,36 @@ describe('recentTxAlerts', () => {
 
     expect(alerts).toHaveLength(1);
     expect(alerts[0]?.id).toBe('#BBBBBB');
+  });
+});
+
+function txAlert(overrides: Partial<TransactionAlert>): TransactionAlert {
+  return { ...tx({}), isRead: false, ...overrides };
+}
+
+describe('toTransactionAlertView', () => {
+  it('carries the real transaction id (transactionId) separately from the shortened display id, plus the real isRead', () => {
+    const view = toTransactionAlertView(txAlert({ isRead: true }));
+
+    expect(view.transactionId).toBe('11111111-1111-1111-1111-111111111111');
+    expect(view.id).toBe('#111111');
+    expect(view.isRead).toBe(true);
+  });
+});
+
+describe('recentTransactionAlertViews', () => {
+  it('sorts by createdAt descending, slices to the limit, and keeps each isRead', () => {
+    const views = recentTransactionAlertViews(
+      [
+        txAlert({ id: 'aaaaaa11-0000-0000-0000-000000000000', createdAt: '2026-01-10T00:00:00.000Z', isRead: true }),
+        txAlert({ id: 'bbbbbb22-0000-0000-0000-000000000000', createdAt: '2026-01-20T00:00:00.000Z', isRead: false }),
+      ],
+      1,
+    );
+
+    expect(views).toHaveLength(1);
+    expect(views[0]?.transactionId).toBe('bbbbbb22-0000-0000-0000-000000000000');
+    expect(views[0]?.isRead).toBe(false);
   });
 });
 

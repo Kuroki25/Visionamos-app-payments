@@ -1,4 +1,4 @@
-import type { Transaction } from '@repo/contracts';
+import type { Transaction, TransactionAlert } from '@repo/contracts';
 
 import { Header } from '../../../components/layout/Header';
 import { StatCardsRow } from '../../../components/ui/StatCardsRow';
@@ -8,7 +8,7 @@ import { TransaccionesTable } from '../../../features/transacciones/components/T
 import { ApiError } from '../../../lib/api/errors';
 import { serverApiClient } from '../../../lib/api/server';
 import { getStaticStatCards } from '../../../lib/metrics';
-import { recentTxAlerts, recentTxRows } from '../../../lib/transactions';
+import { recentTransactionAlertViews, recentTxRows } from '../../../lib/transactions';
 
 const RECENT_ALERTS_LIMIT = 3;
 
@@ -23,9 +23,20 @@ async function getTransactions(): Promise<Transaction[]> {
   }
 }
 
+async function getAlerts(): Promise<TransactionAlert[]> {
+  try {
+    return await serverApiClient.get<TransactionAlert[]>('/transactions/alerts');
+  } catch (error) {
+    if (error instanceof ApiError && error.isForbidden) {
+      return [];
+    }
+    throw error;
+  }
+}
+
 export default async function TransaccionesPage() {
-  const transactions = await getTransactions();
-  const alerts = recentTxAlerts(transactions, RECENT_ALERTS_LIMIT);
+  const [transactions, alertsData] = await Promise.all([getTransactions(), getAlerts()]);
+  const alerts = recentTransactionAlertViews(alertsData, RECENT_ALERTS_LIMIT);
   // All transactions, newest first — the filter pills below narrow this
   // client-side (`TransaccionesTable`), matching the mock's own in-memory
   // filter over `allTx`.

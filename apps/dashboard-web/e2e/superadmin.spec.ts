@@ -63,9 +63,13 @@ test.describe('SUPERADMIN — real happy path against the real backend', () => {
     // mismo patrón ya usado en e2e/accessibility.spec.ts) para que la
     // prueba sea repetible sin acumular datos. ---
     await page.goto('/portales');
+    // `RowActionsMenu` (Radix) portals its content to `document.body` — it is
+    // no longer a DOM descendant of the row, and items are `role="menuitem"`,
+    // not `"button"` (see `docs/frontend/references/01-users-actions-current.png`
+    // regression fix). Scope the trigger to the row, the menu itself to the page.
     const otrahuilcaRow = page.getByRole('link', { name: /Otrahuilca/ }).locator('..');
     await otrahuilcaRow.getByTitle('ACCIONES').click();
-    await otrahuilcaRow.getByRole('button', { name: 'Editar' }).click();
+    await page.getByRole('menuitem', { name: 'Editar' }).click();
 
     const patchPromise = page.waitForResponse(
       (r) => /\/api\/v1\/portals\/[^/]+$/.test(r.url()) && r.request().method() === 'PATCH',

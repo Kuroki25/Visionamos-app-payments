@@ -28,6 +28,7 @@ export const portalesPage = {
     nameLabel: 'Nombre del portal',
     namePlaceholder: 'Ej. Red Avanza',
     requiredError: 'El nombre del portal es obligatorio.',
+    activeLabel: 'Portal activo',
   },
   toasts: {
     created: 'Portal creado correctamente.',

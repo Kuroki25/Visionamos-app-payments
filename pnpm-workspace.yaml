@@ -18,6 +18,7 @@ catalog:
   tailwindcss: 4.3.3
   '@tailwindcss/postcss': 4.3.3
   vitest: 4.1.11
+  '@radix-ui/react-dropdown-menu': 2.1.24
 
 # --- Supply-chain / install safety (docs/DEPENDENCY_POLICY.md) ---
 

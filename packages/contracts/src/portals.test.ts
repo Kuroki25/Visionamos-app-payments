@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { CreatePortalSchema, PortalSchema } from './portals';
+import { CreatePortalSchema, PortalSchema, UpdatePortalSchema } from './portals';
 
 describe('CreatePortalSchema', () => {
   it('accepts a valid name', () => {
@@ -9,6 +9,25 @@ describe('CreatePortalSchema', () => {
 
   it('rejects an empty name', () => {
     expect(CreatePortalSchema.safeParse({ name: '' }).success).toBe(false);
+  });
+
+  it('accepts an optional status (defaults to ACTIVE server-side when absent)', () => {
+    expect(CreatePortalSchema.safeParse({ name: 'Avanza', status: 'INACTIVE' }).success).toBe(true);
+    expect(CreatePortalSchema.safeParse({ name: 'Avanza' }).success).toBe(true);
+  });
+
+  it('rejects an invalid status', () => {
+    expect(CreatePortalSchema.safeParse({ name: 'Avanza', status: 'DELETED' }).success).toBe(false);
+  });
+});
+
+describe('UpdatePortalSchema', () => {
+  it('has no status field, even though CreatePortalSchema does — PATCH /portals/:id/status is the only audited path', () => {
+    const result = UpdatePortalSchema.safeParse({ name: 'Avanza', status: 'INACTIVE' });
+    // Zod strips unknown keys by default — `status` is silently dropped,
+    // not rejected, and never reaches PortalsService.update().
+    expect(result.success).toBe(true);
+    expect(result.success && result.data).not.toHaveProperty('status');
   });
 });
 

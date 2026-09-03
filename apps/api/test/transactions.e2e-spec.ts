@@ -125,13 +125,12 @@ describe('transactions (integration)', () => {
 
     beforeAll(async () => {
       const email = `admin-portal-tx-${Date.now()}@example.com`;
-      const password = 'a-strong-password-123';
-      await superadmin
+      const createRes = await superadmin
         .post('/api/v1/users')
-        .send({ email, password, fullName: 'Admin Portal TX', role: 'ADMIN_PORTAL', scopePortalId: portalAId });
+        .send({ email, fullName: 'Admin Portal TX', role: 'ADMIN_PORTAL', scopePortalId: portalAId });
 
       adminPortalA = await TestSession.create(app.getHttpServer());
-      await adminPortalA.login(email, password);
+      await adminPortalA.login(email, createRes.body.temporaryPassword);
     });
 
     it('lists only transactions of its own portal (both commerces within it)', async () => {
@@ -159,13 +158,12 @@ describe('transactions (integration)', () => {
 
     beforeAll(async () => {
       const email = `admin-commerce-tx-${Date.now()}@example.com`;
-      const password = 'a-strong-password-123';
-      await superadmin
+      const createRes = await superadmin
         .post('/api/v1/users')
-        .send({ email, password, fullName: 'Admin Commerce TX', role: 'ADMIN_COMMERCE', scopeCommerceId: commerceAId });
+        .send({ email, fullName: 'Admin Commerce TX', role: 'ADMIN_COMMERCE', scopeCommerceId: commerceAId });
 
       adminCommerceA = await TestSession.create(app.getHttpServer());
-      await adminCommerceA.login(email, password);
+      await adminCommerceA.login(email, createRes.body.temporaryPassword);
     });
 
     it('lists only its own commerce\'s transactions, not the sibling commerce in the same portal', async () => {
@@ -179,6 +177,89 @@ describe('transactions (integration)', () => {
     it('cannot read a transaction from a sibling commerce in the same portal', async () => {
       const res = await adminCommerceA.get(`/api/v1/transactions/${transactionA2Id}`);
       expect(res.status).toBe(403);
+    });
+  });
+
+  /**
+   * "Alertas de transacciones" real read/unread persistence
+   * (docs/frontend/DASHBOARD_SOURCE_OF_TRUTH.md §17.4 — the `BACKEND_GAP`
+   * this table closes). Uses its own dedicated SUPERADMIN-created actor
+   * (not the shared `superadmin`/`adminPortalA` above) so its read-state
+   * assertions don't depend on execution order with the other `describe`
+   * blocks touching the same transactions.
+   */
+  describe('alerts (read/unread persistence)', () => {
+    let viewerA: TestSession;
+    let viewerAEmail: string;
+
+    beforeAll(async () => {
+      viewerAEmail = `viewer-alerts-${Date.now()}@example.com`;
+      const createRes = await superadmin
+        .post('/api/v1/users')
+        .send({ email: viewerAEmail, fullName: 'Viewer Alerts', role: 'VIEWER', scopePortalId: portalAId });
+
+      viewerA = await TestSession.create(app.getHttpServer());
+      await viewerA.login(viewerAEmail, createRes.body.temporaryPassword);
+    });
+
+    it('GET /transactions/alerts is scope-filtered the same as GET /transactions, and starts unread', async () => {
+      const res = await viewerA.get('/api/v1/transactions/alerts');
+      expect(res.status).toBe(200);
+      const alerts = res.body as { id: string; isRead: boolean }[];
+      const ids = alerts.map((a) => a.id);
+      expect(ids).toEqual(expect.arrayContaining([transactionAId, transactionA2Id]));
+      expect(ids).not.toContain(transactionBId);
+      expect(alerts.every((a) => a.isRead === false)).toBe(true);
+    });
+
+    it('POST /transactions/alerts/read-all marks the given ids read, and it persists across a fresh GET', async () => {
+      const markRes = await viewerA
+        .post('/api/v1/transactions/alerts/read-all')
+        .send({ transactionIds: [transactionAId] });
+      expect(markRes.status).toBe(200);
+
+      const marked = (markRes.body as { id: string; isRead: boolean }[]).find((a) => a.id === transactionAId);
+      expect(marked?.isRead).toBe(true);
+      const stillUnread = (markRes.body as { id: string; isRead: boolean }[]).find((a) => a.id === transactionA2Id);
+      expect(stillUnread?.isRead).toBe(false);
+
+      const getRes = await viewerA.get('/api/v1/transactions/alerts');
+      const afterRefresh = (getRes.body as { id: string; isRead: boolean }[]).find((a) => a.id === transactionAId);
+      expect(afterRefresh?.isRead).toBe(true);
+    });
+
+    it('is idempotent — marking an already-read alert again does not error', async () => {
+      const res = await viewerA.post('/api/v1/transactions/alerts/read-all').send({ transactionIds: [transactionAId] });
+      expect(res.status).toBe(200);
+    });
+
+    it('an id outside the actor\'s real scope is silently dropped, never recorded (BOLA — API1)', async () => {
+      const res = await viewerA
+        .post('/api/v1/transactions/alerts/read-all')
+        .send({ transactionIds: [transactionBId] });
+      expect(res.status).toBe(200);
+
+      // viewerA can't even see transactionBId, so it never appears in the
+      // response — the real proof is that a *different*, actually-scoped
+      // actor's read state for it is untouched (checked below via
+      // superadmin, who can see it).
+      const superadminAlerts = await superadmin.get('/api/v1/transactions/alerts');
+      const forB = (superadminAlerts.body as { id: string; isRead: boolean }[]).find((a) => a.id === transactionBId);
+      expect(forB?.isRead).toBe(false);
+    });
+
+    it('read state is per-user — marking read for viewerA does not mark it read for a different actor', async () => {
+      const email2 = `viewer-alerts-2-${Date.now()}@example.com`;
+      const createRes2 = await superadmin
+        .post('/api/v1/users')
+        .send({ email: email2, fullName: 'Viewer Alerts 2', role: 'VIEWER', scopePortalId: portalAId });
+      const viewerA2 = await TestSession.create(app.getHttpServer());
+      await viewerA2.login(email2, createRes2.body.temporaryPassword);
+
+      // transactionAId was already marked read by viewerA above.
+      const res = await viewerA2.get('/api/v1/transactions/alerts');
+      const forA = (res.body as { id: string; isRead: boolean }[]).find((a) => a.id === transactionAId);
+      expect(forA?.isRead).toBe(false);
     });
   });
 });

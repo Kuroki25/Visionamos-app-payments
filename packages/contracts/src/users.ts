@@ -21,11 +21,17 @@ export const PasswordSchema = z
  * explicit `scopeType` — it's derived server-side from `role` (and, for
  * VIEWER, from which of `scopePortalId`/`scopeCommerceId` is present) so a
  * client can't submit an inconsistent `role`/`scopeType` pair.
+ *
+ * No `password` field: the caller never chooses a new user's credential —
+ * `UsersService.createWithRoleAssignment` generates a cryptographically
+ * random provisional password server-side and returns it once in the
+ * response (`CreateUserResponseSchema`), never persisted or logged in
+ * plaintext, never returned again by `GET /users`. See
+ * `docs/frontend/DASHBOARD_SOURCE_OF_TRUTH.md` §17.1.
  */
 export const CreateUserSchema = z
   .object({
     email: z.email(),
-    password: PasswordSchema,
     fullName: z.string().min(1).max(200),
     role: RoleSchema,
     scopePortalId: z.uuid().nullable().optional(),
@@ -85,3 +91,13 @@ export const UserSchema = z.object({
   createdAt: z.iso.datetime(),
 });
 export type User = z.infer<typeof UserSchema>;
+
+/**
+ * Response body of `POST /users` only — the one place the provisional
+ * password is ever visible. Never the shape of `GET /users` or
+ * `GET /users/:id` (plain `UserSchema`).
+ */
+export const CreateUserResponseSchema = UserSchema.extend({
+  temporaryPassword: z.string(),
+});
+export type CreateUserResponse = z.infer<typeof CreateUserResponseSchema>;

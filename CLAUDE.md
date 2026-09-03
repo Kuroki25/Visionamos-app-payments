@@ -39,7 +39,7 @@ the Claude Design visual handoff and a real end-to-end technical
 closure pass (login/logout, CSRF, RBAC, Playwright E2E against the real
 backend) both landed. Do not create additional source-of-truth
 documents without a real, demonstrated need — this repo already
-consolidated once (see that document's §17 "Historial") specifically to
+consolidated once (see that document's §18 "Historial") specifically to
 avoid duplicated/drifting docs.
 
 Do not follow `docs/architecture/CURRENT_ARCHITECTURE.md`,
