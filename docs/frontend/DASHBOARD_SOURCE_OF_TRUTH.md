@@ -920,7 +920,7 @@ cuando entran en conflicto:
 | Ally: Dirección | Requerida (`NOT NULL`) | Marcada "(opcional)" en la imagen | `address varchar NOT NULL` | Discrepancia visual, no `BACKEND_GAP` | El backend manda: se mantiene requerida; la imagen se equivoca en esa etiqueta |
 | Ally: Razón social / Nombre de contacto | Ya requeridos, no aparecen en la imagen | — | `legalName`, `contactName NOT NULL` | `EXISTS`, imagen incompleta | Se mantienen (el backend manda sobre la imagen) |
 | Ally ↔ Portal / scope | Ya verificado con 403 real (`rbac.spec.ts`) | — | `ScopeAuthorizationService` | `KEEP` | Ninguna |
-| Duplicados (email, taxId, nombre de portal) | `ConflictException` real por unique constraints | — | `UNIQUE(email)`, `UNIQUE(taxId)`, `UNIQUE(portal.name)` | `KEEP` (backend) | Frontend debe traducir el 409 a mensaje UX — **pendiente** |
+| Duplicados (email, taxId, nombre de portal) | `ConflictException` real por unique constraints | — | `UNIQUE(email)`, `UNIQUE(taxId)`, `UNIQUE(portal.name)` | `KEEP` (backend) | **Hecho** — genérico, no por-campo: `ApiError` (`lib/api/errors.ts`) expone `problem.detail` de cualquier `4xx`, y `UserForm`/`PortalForm`/`CommerceForm` ya lo muestran (`setError(cause.message)`) en vez de propagar el error SQL crudo |
 | Alertas de transacciones | `AlertsCard` ya deriva de transacciones reales (3 más recientes); "Marcar todas como leídas" es decorativo (sin `onClick`) | Igual visualmente, con persistencia real de leído/no-leído | No existía tabla de lectura en las 18 tablas reales de Postgres | `BACKEND_GAP` (persistencia leído/no-leído) | **Hecho** — `transaction_alert_reads` (mínima, no un `Notification` completo), ver §17.4 |
 
 ## 18. Historial de este documento
