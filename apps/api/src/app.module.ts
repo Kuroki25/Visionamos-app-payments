@@ -20,6 +20,7 @@ import { CommercesModule } from './modules/commerces/commerces.module';
 import { FormsModule } from './modules/forms/forms.module';
 import { HealthModule } from './modules/health/health.module';
 import { PortalsModule } from './modules/portals/portals.module';
+import { PublicCatalogModule } from './modules/public-catalog/public-catalog.module';
 import { RoleAssignmentEntity } from './modules/role-assignments/entities/role-assignment.entity';
 import { RoleAssignmentsModule } from './modules/role-assignments/role-assignments.module';
 import { ServicesModule } from './modules/services/services.module';
@@ -93,6 +94,7 @@ import { BetterAuthModule } from './infra/better-auth/better-auth.module';
     ServicesModule,
     FormsModule,
     TransactionsModule,
+    PublicCatalogModule,
   ],
   providers: [
     { provide: APP_PIPE, useClass: ZodValidationPipe },

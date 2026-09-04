@@ -56,3 +56,22 @@ truth (colors, spacing, layout, components), this repo's own source of
 truth is the **technical** one; they don't compete. Do not redesign
 approved UI while fixing a functional/security bug — see that
 document's §9 "Visual Contract".
+
+## Portal Web (Public App) — Mandatory Source of Truth
+
+Before modifying `apps/portal-web` — public routes, portals, comercios,
+categories, search, dynamic forms, images/branding, publication, the
+public API, public payments, styles, tokens, content, responsive, or
+SEO — ALWAYS read:
+
+`docs/frontend/PORTAL_WEB_SOURCE_OF_TRUTH.md`
+
+This is `apps/portal-web`'s own source of truth — a separate app from
+`apps/dashboard-web` with a separate SoT (the one above); they don't
+compete and don't need to be kept in sync with each other, only each
+with its own app. `apps/portal-web` is a public, read-only client of
+`apps/api`'s new `GET /public/*` surface — never a second backend, never
+an importer of `apps/dashboard-web` internals. As of 2026-09-03 it covers
+Foundation + Home only (see that document's §22–24) — later slices
+(Portal detail, Comercios, Dynamic Form Renderer, payments) are real,
+open work, not silently abandoned.
